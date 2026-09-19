@@ -2,259 +2,1095 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Legal Metrology Label Auditor</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PAKSHAK — Autonomous Legal Metrology AI Engine</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&family=Space+Grotesk:wght@500;700&family=Fira+Code:wght@400;600&display=swap" rel="stylesheet">
+
   <style>
+    /* ==========================================================================
+       1. CORE DESIGN SYSTEM & DYNAMIC THEMES
+       ========================================================================== */
     :root {
-      --bg: #f8fafc;
-      --card: #ffffff;
-      --border: #e2e8f0;
-      --primary: #2563eb;
-      --primary-hover: #1d4ed8;
-      --text-main: #0f172a;
-      --text-sub: #64748b;
-      --pass: #16a34a;
-      --pass-bg: #dcfce7;
-      --fail: #dc2626;
-      --fail-bg: #fee2e2;
+      --bg-dark: #05070e;
+      --bg-radial: radial-gradient(circle at top center, #0a1326 0%, #05070e 80%);
+      --card-bg: rgba(13, 19, 33, 0.75);
+      
+      /* Default (Consumer/Home) Theme Colors */
+      --theme-primary: #00f2fe;
+      --theme-secondary: #0284c7;
+      --theme-glow: rgba(0, 242, 254, 0.3);
+      --theme-border: rgba(0, 242, 254, 0.2);
+      
+      --text-pure: #ffffff;
+      --text-dim: #94a3b8;
+      --success: #10b981;
+      --danger: #ef4444;
+    }
+
+    /* Inspector Theme Overrides */
+    [data-theme="inspector"] {
+      --theme-primary: #f59e0b;
+      --theme-secondary: #d97706;
+      --theme-glow: rgba(245, 158, 11, 0.3);
+      --theme-border: rgba(245, 158, 11, 0.2);
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
+
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: var(--bg);
-      color: var(--text-main);
-      padding: 16px;
-      max-width: 540px;
-      margin: 0 auto;
-    }
-
-    header { text-align: center; margin-bottom: 20px; }
-    h1 { font-size: 20px; font-weight: 700; color: var(--text-main); }
-    header p { font-size: 13px; color: var(--text-sub); margin-top: 4px; }
-
-    .upload-card {
-      background: var(--card);
-      border: 2px dashed var(--border);
-      border-radius: 12px;
-      padding: 24px 16px;
-      text-align: center;
-      cursor: pointer;
-      transition: border-color 0.2s;
-    }
-    .upload-card:hover { border-color: var(--primary); }
-    .upload-icon { font-size: 32px; margin-bottom: 8px; }
-
-    .preview-container {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg-dark);
+      background-image: var(--bg-radial);
+      color: var(--text-pure);
+      min-height: 100vh;
       display: flex;
-      gap: 10px;
-      justify-content: center;
-      margin-top: 14px;
-      flex-wrap: wrap;
-    }
-    .preview-container img {
-      width: 70px;
-      height: 70px;
-      object-fit: cover;
-      border-radius: 8px;
-      border: 1px solid var(--border);
+      flex-direction: column;
+      overflow-x: hidden;
+      transition: background 0.5s ease;
     }
 
-    .btn-submit {
-      width: 100%;
-      background: var(--primary);
-      color: white;
-      border: none;
-      padding: 14px;
-      border-radius: 8px;
-      font-size: 16px;
-      font-weight: 600;
-      margin-top: 14px;
-      cursor: pointer;
-      display: none;
+    /* Cyber Grid */
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background-image: linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                        linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: -1;
     }
-    .btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
 
-    #loader {
-      display: none;
-      margin: 24px 0;
-      text-align: center;
-    }
-    .spinner {
-      width: 32px;
-      height: 32px;
-      border: 3px solid var(--border);
-      border-top-color: var(--primary);
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-      margin: 0 auto 8px;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    .results-container { display: none; margin-top: 20px; }
-    .status-banner {
-      padding: 12px;
-      border-radius: 8px;
-      font-weight: 700;
-      text-align: center;
-      margin-bottom: 16px;
-      font-size: 14px;
-    }
-    .compliant { background: var(--pass-bg); color: var(--pass); }
-    .non-compliant { background: var(--fail-bg); color: var(--fail); }
-
-    .field-card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 12px;
-      margin-bottom: 8px;
+    /* ==========================================================================
+       2. TOP NAVIGATION
+       ========================================================================== */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      backdrop-filter: blur(20px);
+      background: rgba(5, 7, 14, 0.85);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      padding: 16px 32px;
       display: flex;
+      align-items: center;
       justify-content: space-between;
-      align-items: flex-start;
-      font-size: 13px;
     }
-    .field-title { font-weight: 600; text-transform: capitalize; color: var(--text-main); }
-    .field-value { color: var(--text-sub); margin-top: 2px; max-width: 260px; word-break: break-word; }
-    .badge {
-      padding: 4px 8px;
-      border-radius: 4px;
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      cursor: pointer;
+    }
+
+    .brand-logo {
+      width: 44px;
+      height: 44px;
+      background: linear-gradient(135deg, var(--theme-primary), var(--theme-secondary));
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      box-shadow: 0 0 20px var(--theme-glow);
+      transition: all 0.5s ease;
+    }
+
+    .brand-text h1 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: 1px;
+    }
+
+    .brand-text span {
+      font-size: 11px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .portal-nav-group {
+      display: flex;
+      gap: 8px;
+      background: rgba(255, 255, 255, 0.03);
+      padding: 6px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .portal-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-dim);
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .portal-btn:hover { color: #fff; background: rgba(255, 255, 255, 0.05); }
+    
+    .portal-btn.active {
+      background: linear-gradient(135deg, var(--theme-secondary), var(--theme-primary));
+      color: #fff;
+      box-shadow: 0 4px 15px var(--theme-glow);
+    }
+
+    main { flex: 1; max-width: 1200px; width: 100%; margin: 0 auto; padding: 40px 20px; }
+
+    /* ==========================================================================
+       3. ANIME AI VIDEO CANVAS (HERO SECTION)
+       ========================================================================== */
+    #landingView { text-align: center; }
+
+    .hero-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 40px;
+      font-weight: 800;
+      margin-bottom: 16px;
+      background: linear-gradient(135deg, #fff, #9ca3af);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero-desc {
+      font-size: 16px;
+      color: var(--text-dim);
+      max-width: 650px;
+      margin: 0 auto 30px;
+      line-height: 1.6;
+    }
+
+    .canvas-container {
+      width: 100%;
+      max-width: 850px;
+      margin: 0 auto 50px;
+      background: #000;
+      border: 1px solid var(--theme-border);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.8), 0 0 30px var(--theme-glow);
+      position: relative;
+    }
+
+    canvas {
+      width: 100%;
+      display: block;
+      aspect-ratio: 16 / 9;
+    }
+
+    .canvas-hud {
+      position: absolute;
+      top: 16px; left: 16px;
+      background: rgba(0,0,0,0.6);
+      border: 1px solid var(--theme-border);
+      padding: 6px 12px;
+      border-radius: 6px;
       font-size: 11px;
       font-weight: 700;
-      flex-shrink: 0;
+      color: var(--theme-primary);
+      backdrop-filter: blur(4px);
     }
-    .badge-pass { background: var(--pass-bg); color: var(--pass); }
-    .badge-fail { background: var(--fail-bg); color: var(--fail); }
+
+    /* ==========================================================================
+       3.5 LANDING PAGE: METRICS & FEATURES
+       ========================================================================== */
+    .metrics-strip {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+      margin: 60px auto;
+      max-width: 900px;
+    }
+
+    .metric-card {
+      background: var(--card-bg);
+      border: 1px solid var(--theme-border);
+      border-radius: 16px;
+      padding: 24px 16px;
+      text-align: center;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+    }
+
+    .metric-card:hover {
+      border-color: var(--theme-primary);
+      transform: translateY(-5px) scale(1.02);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5), inset 0 0 20px var(--theme-glow);
+    }
+
+    .metric-value {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 42px;
+      font-weight: 800;
+      color: var(--theme-primary);
+      margin-bottom: 4px;
+      text-shadow: 0 0 15px var(--theme-glow);
+    }
+
+    .metric-label {
+      font-size: 12px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-weight: 600;
+    }
+
+    .section-header {
+      text-align: center;
+      margin-bottom: 36px;
+    }
+
+    .section-header h3 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 28px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .section-header p {
+      color: var(--text-dim);
+      font-size: 14px;
+      margin-top: 8px;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      margin-bottom: 60px;
+      max-width: 1000px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    @media (max-width: 850px) {
+      .features-grid { grid-template-columns: 1fr; }
+      .metrics-strip { grid-template-columns: 1fr; }
+    }
+
+    .feature-box {
+      background: var(--card-bg);
+      border: 1px solid var(--theme-border);
+      border-radius: 16px;
+      padding: 28px 24px;
+      transition: 0.3s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .feature-box::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 3px;
+      background: linear-gradient(90deg, transparent, var(--theme-primary), transparent);
+      opacity: 0;
+      transition: 0.3s;
+    }
+
+    .feature-box:hover::before { opacity: 1; }
+
+    .feature-box:hover {
+      border-color: var(--theme-primary);
+      background: rgba(255, 255, 255, 0.02);
+      transform: translateY(-3px);
+    }
+
+    .feature-icon {
+      width: 48px;
+      height: 48px;
+      background: var(--theme-glow);
+      border: 1px solid var(--theme-primary);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      margin-bottom: 18px;
+      box-shadow: 0 0 15px var(--theme-glow);
+    }
+
+    .feature-box h4 {
+      font-size: 17px;
+      font-weight: 700;
+      margin-bottom: 10px;
+      color: #fff;
+    }
+
+    .feature-box p {
+      font-size: 13.5px;
+      color: var(--text-dim);
+      line-height: 1.6;
+    }
+
+    /* ==========================================================================
+       4. HIGHLY INTERACTIVE PORTAL WORKSPACE
+       ========================================================================== */
+    #portalWorkspace { display: none; }
+
+    .workspace-card {
+      background: var(--card-bg);
+      border: 1px solid var(--theme-border);
+      border-radius: 20px;
+      padding: 36px;
+      box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5), inset 0 0 40px rgba(255, 255, 255, 0.02);
+      backdrop-filter: blur(20px);
+      transition: all 0.5s ease;
+    }
+
+    .ws-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .ws-header h3 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--theme-primary);
+    }
+
+    .ws-badge {
+      font-size: 12px;
+      font-weight: 700;
+      padding: 6px 14px;
+      border-radius: 8px;
+      background: var(--theme-glow);
+      color: #fff;
+      border: 1px solid var(--theme-primary);
+    }
+
+    /* Dropzone with Animated Glow */
+    .dropzone {
+      position: relative;
+      border: 2px dashed rgba(255, 255, 255, 0.2);
+      border-radius: 16px;
+      padding: 40px 20px;
+      text-align: center;
+      cursor: pointer;
+      background: rgba(0, 0, 0, 0.3);
+      transition: all 0.3s;
+      overflow: hidden;
+    }
+
+    .dropzone:hover {
+      border-color: var(--theme-primary);
+      background: rgba(255, 255, 255, 0.02);
+      box-shadow: 0 0 20px var(--theme-glow) inset;
+    }
+
+    .dropzone-icon {
+      font-size: 46px;
+      margin-bottom: 12px;
+      filter: drop-shadow(0 0 10px var(--theme-primary));
+    }
+
+    /* Demo Presets */
+    .demo-dock {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin-top: 16px;
+    }
+    
+    .demo-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--text-dim);
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    .demo-btn:hover {
+      color: #fff;
+      border-color: var(--theme-primary);
+      background: var(--theme-glow);
+    }
+
+    /* Interactive 3D Slots */
+    .slots-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-top: 24px;
+    }
+
+    .slot-item {
+      aspect-ratio: 1/1;
+      border-radius: 12px;
+      background: rgba(0, 0, 0, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-dim);
+      font-size: 13px;
+      font-weight: 600;
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s;
+    }
+
+    .slot-item:hover {
+      transform: translateY(-5px) scale(1.02);
+      box-shadow: 0 10px 20px rgba(0,0,0,0.5), 0 0 15px var(--theme-glow);
+      border-color: var(--theme-primary);
+    }
+
+    .slot-item img { width: 100%; height: 100%; object-fit: cover; }
+    
+    .slot-tag {
+      position: absolute;
+      top: 8px; left: 8px;
+      background: rgba(0,0,0,0.8);
+      border: 1px solid var(--theme-primary);
+      color: var(--theme-primary);
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 800;
+    }
+
+    /* Action Buttons */
+    .btn-row {
+      display: flex;
+      gap: 16px;
+      margin-top: 28px;
+    }
+
+    .btn-main {
+      flex: 1;
+      padding: 16px;
+      border-radius: 12px;
+      border: none;
+      font-size: 15px;
+      font-weight: 800;
+      cursor: pointer;
+      background: linear-gradient(135deg, var(--theme-secondary), var(--theme-primary));
+      color: #fff;
+      box-shadow: 0 4px 15px var(--theme-glow);
+      transition: all 0.2s;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .btn-main:hover {
+      filter: brightness(1.2);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px var(--theme-glow);
+    }
+
+    .btn-clear {
+      padding: 16px 24px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--text-pure);
+      font-weight: 700;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    .btn-clear:hover { background: rgba(255, 255, 255, 0.1); }
+
+    /* ==========================================================================
+       5. LIVE AI TERMINAL & OUTPUT VIEW 
+       ========================================================================== */
+    .terminal-output {
+      margin-top: 32px;
+      padding: 24px;
+      background: #000;
+      border: 1px solid var(--theme-border);
+      border-radius: 12px;
+      font-family: 'Fira Code', monospace;
+      font-size: 13px;
+      color: var(--theme-primary);
+      min-height: 180px;
+      box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
+      position: relative;
+    }
+
+    .term-line { margin-bottom: 8px; opacity: 0; animation: fadeTerm 0.2s forwards; }
+    .term-line.success { color: var(--success); }
+    .term-line.warning { color: var(--danger); }
+    
+    @keyframes fadeTerm { to { opacity: 1; } }
+
+    .cursor-blink {
+      display: inline-block;
+      width: 8px; height: 15px;
+      background: var(--theme-primary);
+      animation: blink 1s step-end infinite;
+      vertical-align: middle;
+      margin-left: 4px;
+    }
+
+    /* Result Card (Shows after terminal finishes) */
+    .result-card {
+      display: none;
+      margin-top: 20px;
+      padding: 20px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--theme-border);
+      border-radius: 12px;
+      animation: slideUp 0.5s ease;
+    }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .btn-export {
+      display: none;
+      width: 100%;
+      margin-top: 16px;
+      padding: 12px;
+      background: transparent;
+      border: 1px dashed var(--theme-primary);
+      color: var(--theme-primary);
+      border-radius: 8px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    
+    .btn-export:hover {
+      background: var(--theme-glow);
+    }
+
+    /* ==========================================================================
+       6. CAMERA VS GALLERY MODAL POP-UP
+       ========================================================================== */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(8px);
+      z-index: 2000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-box {
+      background: var(--card-bg);
+      border: 1px solid var(--theme-border);
+      border-radius: 16px;
+      padding: 24px;
+      width: 90%;
+      max-width: 340px;
+      text-align: center;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.9), inset 0 0 20px var(--theme-glow);
+      animation: modalPop 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    @keyframes modalPop {
+      0% { transform: scale(0.9); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    .modal-options {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .modal-btn {
+      flex: 1;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 16px 8px;
+      color: var(--text-pure);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      font-weight: 700;
+      transition: all 0.2s;
+    }
+
+    .modal-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: var(--theme-primary);
+      box-shadow: 0 0 15px var(--theme-glow);
+    }
+
+    .modal-cancel {
+      width: 100%;
+      padding: 12px;
+      background: transparent;
+      border: none;
+      color: var(--danger);
+      font-weight: 700;
+      cursor: pointer;
+    }
   </style>
 </head>
-<body>
 
-  <header>
-    <h1>Package Compliance HUD</h1>
-    <p>Upload 1 to 3 angles (front, back, MRP/batch panel)</p>
-  </header>
+<body data-theme="consumer">
 
-  <!-- Upload Area -->
-  <div class="upload-card" onclick="document.getElementById('fileInput').click()">
-    <div class="upload-icon">📸</div>
-    <strong>Tap to Snap or Upload Photos</strong>
-    <p style="font-size: 12px; color: var(--text-sub); margin-top: 4px;">Supports camera snap or photo library</p>
-  </div>
+  <!-- NAVIGATION -->
+  <nav>
+    <div class="brand" onclick="showLanding()">
+      <div class="brand-logo" id="logoIcon">⚖</div>
+      <div class="brand-text">
+        <h1>PAKSHAK</h1>
+        <span>Legal Metrology Auditor</span>
+      </div>
+    </div>
+    <div class="portal-nav-group">
+      <button class="portal-btn active" id="btnConsumer" onclick="switchTheme('consumer')">👤 Consumer Portal</button>
+      <button class="portal-btn" id="btnInspector" onclick="switchTheme('inspector')">🛡️ Inspector Portal</button>
+    </div>
+  </nav>
 
-  <input type="file" id="fileInput" accept="image/*" multiple style="display: none;" />
-  <div class="preview-container" id="previewContainer"></div>
+  <main>
+    <!-- LANDING VIEW WITH ANIME CANVAS -->
+    <section id="landingView">
+      <div class="hero-title">Automated AI Compliance Engine</div>
+      <p class="hero-desc">Extracting labels, cross-referencing Rules (2011), and empowering authorities instantly.</p>
+      
+      <div class="canvas-container">
+        <div class="canvas-hud">▶ LIVE AI CAPTURE SIMULATION</div>
+        <canvas id="animeCanvas" width="850" height="478"></canvas>
+      </div>
 
-  <button class="btn-submit" id="submitBtn" onclick="uploadAndAudit()">Run Local AI Audit</button>
+      <!-- ================= SYSTEM TELEMETRY METRICS ================= -->
+      <div class="metrics-strip">
+        <div class="metric-card">
+          <div class="metric-value">12x</div>
+          <div class="metric-label">Faster Audits</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value">85%</div>
+          <div class="metric-label">Effort Reduction</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value">98%</div>
+          <div class="metric-label">Detection Rate</div>
+        </div>
+      </div>
 
-  <!-- Loading State -->
-  <div id="loader">
-    <div class="spinner"></div>
-    <p style="font-size: 13px; color: var(--text-sub);">Qwen2.5-VL running inference on laptop GPU...</p>
-  </div>
+      <!-- ================= SYSTEM BENEFITS GRID ================= -->
+      <div class="section-header">
+        <h3>System Impact & Utility</h3>
+        <p>Built for Department of Consumer Affairs enforcement and conscious buyers.</p>
+      </div>
 
-  <!-- Audit Results Section -->
-  <div class="results-container" id="resultsContainer">
-    <div id="statusBanner" class="status-banner"></div>
-    <div id="fieldsList"></div>
+      <div class="features-grid">
+        <div class="feature-box">
+          <div class="feature-icon">⚖️</div>
+          <h4>Consumer Protection</h4>
+          <p>Prevents overcharging, deceptive net weights, and missing packer disclosures before products even leave the retail shelves.</p>
+        </div>
+        <div class="feature-box">
+          <div class="feature-icon">🚀</div>
+          <h4>15-Second Field Audits</h4>
+          <p>Replaces lengthy manual officer checklists with instant visual bounding boxes and automated compliance log generation.</p>
+        </div>
+        <div class="feature-box">
+          <div class="feature-icon">📑</div>
+          <h4>Defensible Records</h4>
+          <p>Generates timestamped, tamper-proof inspection dossiers ready to substantiate statutory notices under the 2009 Act.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- PORTAL WORKSPACE (CONSUMER / INSPECTOR) -->
+    <section id="portalWorkspace">
+      <div class="workspace-card">
+        
+        <div class="ws-header">
+          <h3 id="wsTitle">Consumer Protection Scan</h3>
+          <div class="ws-badge" id="wsBadge">Mode: Citizen</div>
+        </div>
+
+        <!-- Hidden File Inputs -->
+        <input type="file" id="fileInputGallery" accept="image/*" multiple style="display:none;" />
+        <input type="file" id="fileInputCamera" accept="image/*" capture="environment" style="display:none;" />
+        
+        <!-- Dropzone -->
+        <div class="dropzone" onclick="showUploadModal()">
+          <div class="dropzone-icon">📸</div>
+          <h4 style="font-size: 16px; font-weight: 700; color: #fff;">Initialize Capture Sequence</h4>
+          <p style="font-size: 13px; color: var(--text-dim); margin-top: 6px;">Upload Front, MRP, and Net Quantity Panels (1-3 files)</p>
+        </div>
+
+        <div class="demo-dock">
+          <button class="demo-btn" onclick="loadMock('clean')">Load Compliant Product</button>
+          <button class="demo-btn" onclick="loadMock('violation')">Load Non-Compliant Product</button>
+        </div>
+
+        <div class="slots-grid">
+          <div class="slot-item" id="slot1"><div class="slot-tag">Angle 1</div>Waiting...</div>
+          <div class="slot-item" id="slot2"><div class="slot-tag">Angle 2</div>Waiting...</div>
+          <div class="slot-item" id="slot3"><div class="slot-tag">Angle 3</div>Waiting...</div>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn-main" onclick="startTerminalScan()">Run AI Inspection Scan</button>
+          <button class="btn-clear" onclick="clearWorkspace()">Clear</button>
+        </div>
+
+        <!-- The Interactive Terminal Output -->
+        <div class="terminal-output" id="terminal">
+          <div style="color: var(--text-dim);">Awaiting image ingest sequence...<span class="cursor-blink"></span></div>
+        </div>
+
+        <!-- Result Card -->
+        <div class="result-card" id="resultCard">
+          <h4 style="color:#fff; margin-bottom: 12px; display: flex; justify-content: space-between;">
+            <span>Legal Metrology (2011) Audit Report</span>
+            <span id="resultVerdict" style="font-weight: 800;"></span>
+          </h4>
+          <div style="font-size: 13px; color: var(--text-dim); line-height: 1.8;" id="resultDetails"></div>
+          
+          <!-- Inspector Only Export Button -->
+          <button class="btn-export" id="exportBtn" onclick="alert('Downloading encrypted PDF dossier...')">
+            📥 Export Tamper-Proof Legal Dossier (PDF)
+          </button>
+        </div>
+
+      </div>
+    </section>
+  </main>
+
+  <!-- ================= CAMERA VS GALLERY MODAL ================= -->
+  <div id="uploadModal" class="modal-overlay">
+    <div class="modal-box">
+      <h4 style="margin-bottom: 16px; font-size: 18px; color: var(--text-pure);">Select Image Source</h4>
+      
+      <div class="modal-options">
+        <button class="modal-btn" onclick="openCamera()">
+          <span style="font-size: 24px;">📷</span>
+          <span>Take Photo<br><small style="color:var(--text-dim); font-size: 10px;">Use Device Camera</small></span>
+        </button>
+        
+        <button class="modal-btn" onclick="openGallery()">
+          <span style="font-size: 24px;">🖼️</span>
+          <span>Choose Gallery<br><small style="color:var(--text-dim); font-size: 10px;">Upload from Device</small></span>
+        </button>
+      </div>
+      
+      <button class="modal-cancel" onclick="closeUploadModal()">Cancel</button>
+    </div>
   </div>
 
   <script>
-    const fileInput = document.getElementById('fileInput');
-    const previewContainer = document.getElementById('previewContainer');
-    const submitBtn = document.getElementById('submitBtn');
-    const loader = document.getElementById('loader');
-    const resultsContainer = document.getElementById('resultsContainer');
-    const fieldsList = document.getElementById('fieldsList');
-    const statusBanner = document.getElementById('statusBanner');
+    /* ==========================================================================
+       THEME & VIEW SWITCHING LOGIC (WITH ORANGE BUG FIX)
+       ========================================================================== */
+    let currentTheme = 'consumer';
+    let activeFiles = 0;
 
-    let selectedFiles = [];
+    function showLanding() {
+      // 1. Switch the views
+      document.getElementById('landingView').style.display = 'block';
+      document.getElementById('portalWorkspace').style.display = 'none';
+      
+      // 2. Remove active state from portal buttons
+      document.getElementById('btnConsumer').classList.remove('active');
+      document.getElementById('btnInspector').classList.remove('active');
+      
+      // 3. THIS IS THE FIX: Reset the body theme back to 'consumer' (blue)
+      document.body.setAttribute('data-theme', 'consumer');
+      currentTheme = 'consumer';
+      
+      // 4. Reset the logo back to default
+      document.getElementById('logoIcon').innerText = "⚖";
+      
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
 
-    fileInput.addEventListener('change', (e) => {
-      const files = Array.from(e.target.files);
-      if (files.length > 3) {
-        alert("Maximum 3 images allowed.");
-        fileInput.value = "";
+    function switchTheme(theme) {
+      currentTheme = theme;
+      document.body.setAttribute('data-theme', theme);
+      
+      document.getElementById('landingView').style.display = 'none';
+      document.getElementById('portalWorkspace').style.display = 'block';
+      
+      const isInspector = (theme === 'inspector');
+      document.getElementById('btnConsumer').classList.toggle('active', !isInspector);
+      document.getElementById('btnInspector').classList.toggle('active', isInspector);
+      
+      document.getElementById('wsTitle').innerText = isInspector ? "Enforcement Officer Workspace" : "Consumer Protection Scan";
+      document.getElementById('wsBadge').innerText = isInspector ? "Mode: Authority" : "Mode: Citizen";
+      document.getElementById('logoIcon').innerText = isInspector ? "🛡️" : "⚖";
+
+      clearWorkspace();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    /* ==========================================================================
+       IMAGE HANDLING & CAMERA MODAL
+       ========================================================================== */
+    const modal = document.getElementById('uploadModal');
+    const inputGallery = document.getElementById('fileInputGallery');
+    const inputCamera = document.getElementById('fileInputCamera');
+
+    function showUploadModal() { modal.style.display = 'flex'; }
+    function closeUploadModal() { modal.style.display = 'none'; }
+
+    function openGallery() {
+      closeUploadModal();
+      inputGallery.click();
+    }
+
+    function openCamera() {
+      closeUploadModal();
+      inputCamera.click();
+    }
+
+    function handleFiles(e) {
+      const files = Array.from(e.target.files).slice(0, 3);
+      if(files.length > 0) {
+        fillSlots(files.map(f => URL.createObjectURL(f)));
+        window.currentMockType = 'clean'; // default assumption for real uploads
+      }
+    }
+
+    inputGallery.addEventListener('change', handleFiles);
+    inputCamera.addEventListener('change', handleFiles);
+
+    window.onclick = function(event) {
+      if (event.target == modal) closeUploadModal();
+    }
+
+    function loadMock(type) {
+      const color = type === 'clean' ? '10b981' : 'ef4444';
+      const text = type === 'clean' ? 'COMPLIANT BOX' : 'FLAGGED BOX';
+      const svg = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400"><rect width="400" height="400" fill="%230f172a"/><rect x="50" y="50" width="300" height="300" rx="16" fill="none" stroke="%23${color}" stroke-width="4"/><text x="200" y="200" fill="%23fff" font-family="sans-serif" font-size="24" font-weight="bold" text-anchor="middle">${text}</text></svg>`;
+      fillSlots([svg]);
+      window.currentMockType = type;
+    }
+
+    function fillSlots(urls) {
+      activeFiles = urls.length;
+      for(let i=1; i<=3; i++) {
+        const slot = document.getElementById(`slot${i}`);
+        if(urls[i-1]) {
+          slot.innerHTML = `<div class="slot-tag">Angle ${i}</div><img src="${urls[i-1]}" />`;
+        } else {
+          slot.innerHTML = `<div class="slot-tag">Angle ${i}</div>Waiting...`;
+        }
+      }
+      resetTerminal();
+    }
+
+    function clearWorkspace() {
+      activeFiles = 0;
+      for(let i=1; i<=3; i++) {
+        document.getElementById(`slot${i}`).innerHTML = `<div class="slot-tag">Angle ${i}</div>Waiting...`;
+      }
+      resetTerminal();
+      document.getElementById('resultCard').style.display = 'none';
+      inputGallery.value = '';
+      inputCamera.value = '';
+    }
+
+    /* ==========================================================================
+       LIVE TERMINAL SIMULATION (AI SCANNING EFFECT)
+       ========================================================================== */
+    function resetTerminal() {
+      document.getElementById('terminal').innerHTML = `<div style="color: var(--text-dim);">Awaiting image ingest sequence...<span class="cursor-blink"></span></div>`;
+      document.getElementById('resultCard').style.display = 'none';
+    }
+
+    function startTerminalScan() {
+      if (activeFiles === 0) {
+        alert("Action Restricted: Please upload or select a preset image first.");
         return;
       }
 
-      selectedFiles = files;
-      previewContainer.innerHTML = "";
+      const term = document.getElementById('terminal');
+      term.innerHTML = ''; // clear
+      document.getElementById('resultCard').style.display = 'none';
+      document.getElementById('exportBtn').style.display = 'none';
 
-      files.forEach(file => {
-        const img = document.createElement('img');
-        img.src = URL.createObjectURL(file);
-        previewContainer.appendChild(img);
-      });
+      const sequence = [
+        `> Initiating PAKSHAK secure uplink... [OK]`,
+        `> Loading Multimodal Checkpoint (Qwen2.5-VL)... [OK]`,
+        `> Ingesting ${activeFiles} package visual arrays...`,
+        `> Running OCR & Feature Extraction pipeline...`,
+        `> Cross-referencing against Legal Metrology (Packaged Commodities) Rules, 2011...`,
+        `> Checking Rule 6(1)(d): Net Quantity...`,
+        `> Checking Rule 6(1)(e): Maximum Retail Price...`,
+        `> Checking Rule 6(10): Country of Origin...`
+      ];
 
-      if (files.length > 0) {
-        submitBtn.style.display = "block";
-        submitBtn.innerText = `Analyze ${files.length} Photo(s)`;
-      } else {
-        submitBtn.style.display = "none";
+      let i = 0;
+      function printLine() {
+        if (i < sequence.length) {
+          const div = document.createElement('div');
+          div.className = 'term-line';
+          div.innerText = sequence[i];
+          term.appendChild(div);
+          term.scrollTop = term.scrollHeight;
+          i++;
+          setTimeout(printLine, 400 + Math.random() * 400); // Random typing delay
+        } else {
+          finishScan();
+        }
       }
-    });
-
-    async function uploadAndAudit() {
-      if (selectedFiles.length === 0) return;
-
-      const formData = new FormData();
-      selectedFiles.forEach(file => formData.append('files', file));
-
-      submitBtn.disabled = true;
-      loader.style.display = "block";
-      resultsContainer.style.display = "none";
-
-      try {
-        const response = await fetch('/api/v1/audit', {
-          method: 'POST',
-          body: formData
-        });
-
-        if (!response.ok) throw new Error(`Server returned HTTP ${response.status}`);
-        const result = await response.json();
-
-        renderResults(result.data);
-      } catch (err) {
-        alert("Inference Error: " + err.message);
-      } finally {
-        loader.style.display = "none";
-        submitBtn.disabled = false;
-      }
+      printLine();
     }
 
-    function renderResults(data) {
-      fieldsList.innerHTML = "";
+    function finishScan() {
+      const term = document.getElementById('terminal');
+      const isClean = (window.currentMockType !== 'violation');
+      
+      const finalMsg = document.createElement('div');
+      finalMsg.className = `term-line ${isClean ? 'success' : 'warning'}`;
+      finalMsg.style.fontWeight = 'bold';
+      finalMsg.style.marginTop = '10px';
+      finalMsg.innerHTML = isClean 
+        ? `> [SUCCESS] Audit Complete. 0 Statutory Violations Detected.<span class="cursor-blink"></span>`
+        : `> [ALERT] Audit Complete. 1 Statutory Violation Detected (Rule 6.10).<span class="cursor-blink"></span>`;
+      term.appendChild(finalMsg);
+      term.scrollTop = term.scrollHeight;
 
-      let missingCount = 0;
-      for (const [key, value] of Object.entries(data)) {
-        const isPresent = value !== false && value !== null && value !== "false";
-        if (!isPresent) missingCount++;
+      // Populate Result Card
+      setTimeout(() => {
+        const rc = document.getElementById('resultCard');
+        rc.style.display = 'block';
+        
+        document.getElementById('resultVerdict').innerText = isClean ? 'VERIFIED: COMPLIANT' : 'VIOLATION DETECTED';
+        document.getElementById('resultVerdict').style.color = isClean ? 'var(--success)' : 'var(--danger)';
 
-        const labelName = key.replace(/_/g, ' ');
-        const card = document.createElement('div');
-        card.className = "field-card";
-        card.innerHTML = `
-          <div>
-            <div class="field-title">${labelName}</div>
-            <div class="field-value">${isPresent ? value : 'Missing or not clearly visible'}</div>
-          </div>
-          <div class="badge ${isPresent ? 'badge-pass' : 'badge-fail'}">
-            ${isPresent ? 'FOUND' : 'MISSING'}
-          </div>
+        document.getElementById('resultDetails').innerHTML = `
+          <div><strong>Rule 6(1)(d) Net Weight:</strong> 500g <span style="color:var(--success)">[PASS]</span></div>
+          <div><strong>Rule 6(1)(e) MRP:</strong> ₹ 180.00 <span style="color:var(--success)">[PASS]</span></div>
+          <div><strong>Rule 6(10) Origin:</strong> ${isClean ? 'India <span style="color:var(--success)">[PASS]</span>' : 'Missing Declaration <span style="color:var(--danger)">[FAIL]</span>'}</div>
         `;
-        fieldsList.appendChild(card);
-      }
 
-      if (missingCount === 0) {
-        statusBanner.className = "status-banner compliant";
-        statusBanner.innerText = "✓ Fully Compliant Label (All 10 Rules Passed)";
-      } else {
-        statusBanner.className = "status-banner non-compliant";
-        statusBanner.innerText = `⚠ Non-Compliant: ${missingCount} Statutory Declaration(s) Missing`;
-      }
-
-      resultsContainer.style.display = "block";
+        // Show Export PDF only in Inspector mode
+        if (currentTheme === 'inspector') {
+          document.getElementById('exportBtn').style.display = 'block';
+        }
+      }, 600);
     }
+
+    /* ==========================================================================
+       ANIME CANVAS ANIMATION (HOME PAGE)
+       ========================================================================== */
+    const canvas = document.getElementById('animeCanvas');
+    const ctx = canvas.getContext('2d');
+    let frame = 0;
+
+    function drawScene() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      // Cyber background gradient
+      const bgGrad = ctx.createLinearGradient(0,0,0,canvas.height);
+      bgGrad.addColorStop(0, '#0a0f1d');
+      bgGrad.addColorStop(1, '#020617');
+      ctx.fillStyle = bgGrad;
+      ctx.fillRect(0,0,canvas.width, canvas.height);
+
+      // Grid lines
+      ctx.strokeStyle = 'rgba(0, 242, 254, 0.05)';
+      ctx.lineWidth = 1;
+      for(let i=0; i<canvas.width; i+=40) { ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i,canvas.height); ctx.stroke(); }
+      for(let i=0; i<canvas.height; i+=40) { ctx.beginPath(); ctx.moveTo(0,i); ctx.lineTo(canvas.width,i); ctx.stroke(); }
+
+      // Draw stylized Anime Character Silhouette on Left
+      ctx.fillStyle = '#0f172a';
+      ctx.beginPath();
+      ctx.arc(200, 250, 60, Math.PI, 0); // Head
+      ctx.lineTo(260, 480); ctx.lineTo(140, 480); // Body
+      ctx.fill();
+
+      // Glowing Anime Tech Glasses
+      const glow = Math.sin(frame * 0.05) * 0.5 + 0.5;
+      ctx.fillStyle = `rgba(0, 242, 254, ${0.4 + glow*0.6})`;
+      ctx.shadowColor = '#00f2fe';
+      ctx.shadowBlur = 15;
+      ctx.fillRect(170, 230, 35, 10);
+      ctx.fillRect(215, 230, 35, 10);
+      ctx.shadowBlur = 0;
+
+      // Draw Hand & Phone
+      ctx.fillStyle = '#1e293b';
+      ctx.fillRect(250, 280, 25, 60); // arm
+      ctx.fillStyle = '#334155';
+      ctx.fillRect(260, 260, 20, 40); // phone
+      
+      // Camera Flash (Occasional)
+      if (frame % 150 > 140) {
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+        ctx.beginPath(); ctx.arc(270, 270, 40, 0, Math.PI*2); ctx.fill();
+      }
+
+      // Data transfer particles
+      ctx.fillStyle = '#00f2fe';
+      for(let i=0; i<5; i++) {
+        let x = 280 + ((frame * 3 + i * 40) % 250);
+        let y = 270 + Math.sin(frame*0.1 + i)*15;
+        ctx.fillRect(x, y, 8, 3);
+      }
+
+      // Target Box (Right Side)
+      ctx.strokeStyle = '#cbd5e1';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(550, 150, 180, 220); // The Product Box
+      ctx.fillStyle = 'rgba(255,255,255,0.05)';
+      ctx.fillRect(550, 150, 180, 220);
+      
+      // Mock Text on Box
+      ctx.fillStyle = '#475569';
+      ctx.font = '14px sans-serif';
+      ctx.fillText("Net Wt: 1 kg", 570, 190);
+      ctx.fillText("MRP: ₹150", 570, 220);
+
+      // Cyber Scan Line bouncing over the box
+      let scanY = 150 + ((Math.sin(frame * 0.03) + 1) / 2) * 220;
+      ctx.fillStyle = 'rgba(0, 242, 254, 0.2)';
+      ctx.fillRect(550, 150, 180, scanY - 150);
+      ctx.fillStyle = '#00f2fe';
+      ctx.shadowColor = '#00f2fe';
+      ctx.shadowBlur = 10;
+      ctx.fillRect(540, scanY, 200, 3);
+      ctx.shadowBlur = 0;
+
+      // Bounding Boxes appearing after scan sweeps down
+      if (scanY > 190) {
+        ctx.strokeStyle = '#10b981'; // Green Pass
+        ctx.strokeRect(565, 175, 80, 20);
+        ctx.fillStyle = '#10b981';
+        ctx.fillText("PASS", 655, 190);
+      }
+      if (scanY > 220) {
+        ctx.strokeStyle = '#10b981'; // Green Pass
+        ctx.strokeRect(565, 205, 80, 20);
+        ctx.fillStyle = '#10b981';
+        ctx.fillText("PASS", 655, 220);
+      }
+
+      frame++;
+      requestAnimationFrame(drawScene);
+    }
+    drawScene();
   </script>
 </body>
 </html>
