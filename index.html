@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Legal Metrology Label Auditor</title>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --border: #e2e8f0;
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --text-main: #0f172a;
+      --text-sub: #64748b;
+      --pass: #16a34a;
+      --pass-bg: #dcfce7;
+      --fail: #dc2626;
+      --fail-bg: #fee2e2;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text-main);
+      padding: 16px;
+      max-width: 540px;
+      margin: 0 auto;
+    }
+
+    header { text-align: center; margin-bottom: 20px; }
+    h1 { font-size: 20px; font-weight: 700; color: var(--text-main); }
+    header p { font-size: 13px; color: var(--text-sub); margin-top: 4px; }
+
+    .upload-card {
+      background: var(--card);
+      border: 2px dashed var(--border);
+      border-radius: 12px;
+      padding: 24px 16px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+    .upload-card:hover { border-color: var(--primary); }
+    .upload-icon { font-size: 32px; margin-bottom: 8px; }
+
+    .preview-container {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      margin-top: 14px;
+      flex-wrap: wrap;
+    }
+    .preview-container img {
+      width: 70px;
+      height: 70px;
+      object-fit: cover;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+
+    .btn-submit {
+      width: 100%;
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 14px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      margin-top: 14px;
+      cursor: pointer;
+      display: none;
+    }
+    .btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    #loader {
+      display: none;
+      margin: 24px 0;
+      text-align: center;
+    }
+    .spinner {
+      width: 32px;
+      height: 32px;
+      border: 3px solid var(--border);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 8px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .results-container { display: none; margin-top: 20px; }
+    .status-banner {
+      padding: 12px;
+      border-radius: 8px;
+      font-weight: 700;
+      text-align: center;
+      margin-bottom: 16px;
+      font-size: 14px;
+    }
+    .compliant { background: var(--pass-bg); color: var(--pass); }
+    .non-compliant { background: var(--fail-bg); color: var(--fail); }
+
+    .field-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      font-size: 13px;
+    }
+    .field-title { font-weight: 600; text-transform: capitalize; color: var(--text-main); }
+    .field-value { color: var(--text-sub); margin-top: 2px; max-width: 260px; word-break: break-word; }
+    .badge {
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .badge-pass { background: var(--pass-bg); color: var(--pass); }
+    .badge-fail { background: var(--fail-bg); color: var(--fail); }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Package Compliance HUD</h1>
+    <p>Upload 1 to 3 angles (front, back, MRP/batch panel)</p>
+  </header>
+
+  <!-- Upload Area -->
+  <div class="upload-card" onclick="document.getElementById('fileInput').click()">
+    <div class="upload-icon">📸</div>
+    <strong>Tap to Snap or Upload Photos</strong>
+    <p style="font-size: 12px; color: var(--text-sub); margin-top: 4px;">Supports camera snap or photo library</p>
+  </div>
+
+  <input type="file" id="fileInput" accept="image/*" multiple style="display: none;" />
+  <div class="preview-container" id="previewContainer"></div>
+
+  <button class="btn-submit" id="submitBtn" onclick="uploadAndAudit()">Run Local AI Audit</button>
+
+  <!-- Loading State -->
+  <div id="loader">
+    <div class="spinner"></div>
+    <p style="font-size: 13px; color: var(--text-sub);">Qwen2.5-VL running inference on laptop GPU...</p>
+  </div>
+
+  <!-- Audit Results Section -->
+  <div class="results-container" id="resultsContainer">
+    <div id="statusBanner" class="status-banner"></div>
+    <div id="fieldsList"></div>
+  </div>
+
+  <script>
+    const fileInput = document.getElementById('fileInput');
+    const previewContainer = document.getElementById('previewContainer');
+    const submitBtn = document.getElementById('submitBtn');
+    const loader = document.getElementById('loader');
+    const resultsContainer = document.getElementById('resultsContainer');
+    const fieldsList = document.getElementById('fieldsList');
+    const statusBanner = document.getElementById('statusBanner');
+
+    let selectedFiles = [];
+
+    fileInput.addEventListener('change', (e) => {
+      const files = Array.from(e.target.files);
+      if (files.length > 3) {
+        alert("Maximum 3 images allowed.");
+        fileInput.value = "";
+        return;
+      }
+
+      selectedFiles = files;
+      previewContainer.innerHTML = "";
+
+      files.forEach(file => {
+        const img = document.createElement('img');
+        img.src = URL.createObjectURL(file);
+        previewContainer.appendChild(img);
+      });
+
+      if (files.length > 0) {
+        submitBtn.style.display = "block";
+        submitBtn.innerText = `Analyze ${files.length} Photo(s)`;
+      } else {
+        submitBtn.style.display = "none";
+      }
+    });
+
+    async function uploadAndAudit() {
+      if (selectedFiles.length === 0) return;
+
+      const formData = new FormData();
+      selectedFiles.forEach(file => formData.append('files', file));
+
+      submitBtn.disabled = true;
+      loader.style.display = "block";
+      resultsContainer.style.display = "none";
+
+      try {
+        const response = await fetch('/api/v1/audit', {
+          method: 'POST',
+          body: formData
+        });
+
+        if (!response.ok) throw new Error(`Server returned HTTP ${response.status}`);
+        const result = await response.json();
+
+        renderResults(result.data);
+      } catch (err) {
+        alert("Inference Error: " + err.message);
+      } finally {
+        loader.style.display = "none";
+        submitBtn.disabled = false;
+      }
+    }
+
+    function renderResults(data) {
+      fieldsList.innerHTML = "";
+
+      let missingCount = 0;
+      for (const [key, value] of Object.entries(data)) {
+        const isPresent = value !== false && value !== null && value !== "false";
+        if (!isPresent) missingCount++;
+
+        const labelName = key.replace(/_/g, ' ');
+        const card = document.createElement('div');
+        card.className = "field-card";
+        card.innerHTML = `
+          <div>
+            <div class="field-title">${labelName}</div>
+            <div class="field-value">${isPresent ? value : 'Missing or not clearly visible'}</div>
+          </div>
+          <div class="badge ${isPresent ? 'badge-pass' : 'badge-fail'}">
+            ${isPresent ? 'FOUND' : 'MISSING'}
+          </div>
+        `;
+        fieldsList.appendChild(card);
+      }
+
+      if (missingCount === 0) {
+        statusBanner.className = "status-banner compliant";
+        statusBanner.innerText = "✓ Fully Compliant Label (All 10 Rules Passed)";
+      } else {
+        statusBanner.className = "status-banner non-compliant";
+        statusBanner.innerText = `⚠ Non-Compliant: ${missingCount} Statutory Declaration(s) Missing`;
+      }
+
+      resultsContainer.style.display = "block";
+    }
+  </script>
+</body>
+</html>
