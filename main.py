@@ -1,6 +1,7 @@
 import base64
 import io
 import json
+import re
 import ollama
 from pathlib import Path
 from PIL import Image
@@ -29,10 +30,10 @@ class ProductDetails(BaseModel):
         description="Net quantity with units (e.g., '500 g', '1 L'), or false if absent."
     )
     mrp: str | bool = Field(
-        description="Maximum Retail Price with currency (e.g., '₹50.00'), or false if absent."
+        description="Maximum Retail Price with currency (e.g., '50.00'), or false if absent."
     )
     unit_sale_price: str | bool = Field(
-        description="Unit sale price (e.g., '₹0.10/g'), or false if absent."
+        description="Unit sale price (e.g., '0.10/g'), or false if absent without including symbol."
     )
     manufacturing_date: str | bool = Field(
         description="Date/month/year of manufacture/packing, or false if absent."
@@ -57,10 +58,10 @@ PROMPT = (
     "3. manufacturer_name: Legal name of the manufacturing/packing entity.\n"
     "4. manufacturer_address: Physical factory/plant address of the manufacturer.\n"
     "5. net_quantity: Declared net weight, volume, or piece count with units.\n"
-    "6. mrp: Maximum Retail Price including currency symbol.\n"
+    "6. mrp: Maximum Retail Price including currency symbol only if present,must not be text, numbers only.\n"
     "7. unit_sale_price: Per-unit price.\n"
     "8. manufacturing_date: Date/month/year of manufacture or packing.\n"
-    "9. use_by_date: Expiry date, use-by date, or best-before timeframe/date.\n"
+    "9. use_by_date: Expiry date, or best-before timeframe/date.\n"
     "10. consumer_care_details: Customer care phone, email, or physical postal address.\n\n"
     "Strictly adhere to the target JSON schema."
 )
@@ -94,7 +95,28 @@ def run_qwen_inference(encoded_images: list[str]) -> dict:
         options={"temperature": 0.0},
     )
     validated_data = ProductDetails.model_validate_json(response.message.content)
-    return validated_data.model_dump()
+
+    data = validated_data.model_dump()
+
+    # --- MANUAL POST-INFERENCE VALIDATION ---
+    # Check mrp: must contain at least one digit, else set to False
+    if data.get("mrp") is not False:
+        if not re.search(r"\d", str(data.get("mrp", ""))):
+            data["mrp"] = False
+
+    if data.get("unit_sale_price") is not False:
+        if not re.search(r"\d", str(data.get("unit_sale_price", ""))):
+            data["unit_sale_price"] = False
+
+    # Check manufacturing_date: must contain at least one digit, else set to False
+    if data.get("manufacturing_date") is not False:
+        if not re.search(r"\d", str(data.get("manufacturing_date", ""))):
+            data["manufacturing_date"] = False
+    # ----------------------------------------
+
+    return data
+
+
 
 
 # --- FastAPI Web Application ---
@@ -166,8 +188,8 @@ def extract_product_info_from_disk(image_paths: list[str]) -> dict:
 if __name__ == "__main__":
     # If executed directly with 'python main.py', it tests local files
     IMAGE_PATHS = [
-        "/home/swiz/testmodel/front.jpeg",
-        "/home/swiz/testmodel/back.jpeg",
+        #"/home/swiz/testmodel/front.jpeg",
+        #"/home/swiz/testmodel/back.jpeg",
     ]
 
     try:
@@ -175,3 +197,4 @@ if __name__ == "__main__":
         print(json.dumps(extracted_data, indent=2))
     except Exception as e:
         print(f"Error processing images: {e}")
+
