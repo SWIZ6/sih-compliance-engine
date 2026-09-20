@@ -8,8 +8,8 @@ from PIL import Image
 from pydantic import BaseModel, Field
 
 from fastapi import FastAPI, UploadFile, File, HTTPException
-from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 
 # 1. Pydantic schema enforcing the 10 statutory declarations
@@ -95,11 +95,9 @@ def run_qwen_inference(encoded_images: list[str]) -> dict:
         options={"temperature": 0.0},
     )
     validated_data = ProductDetails.model_validate_json(response.message.content)
-
     data = validated_data.model_dump()
 
     # --- MANUAL POST-INFERENCE VALIDATION ---
-    # Check mrp: must contain at least one digit, else set to False
     if data.get("mrp") is not False:
         if not re.search(r"\d", str(data.get("mrp", ""))):
             data["mrp"] = False
@@ -108,15 +106,12 @@ def run_qwen_inference(encoded_images: list[str]) -> dict:
         if not re.search(r"\d", str(data.get("unit_sale_price", ""))):
             data["unit_sale_price"] = False
 
-    # Check manufacturing_date: must contain at least one digit, else set to False
     if data.get("manufacturing_date") is not False:
         if not re.search(r"\d", str(data.get("manufacturing_date", ""))):
             data["manufacturing_date"] = False
     # ----------------------------------------
 
     return data
-
-
 
 
 # --- FastAPI Web Application ---
@@ -132,24 +127,14 @@ app.add_middleware(
 )
 
 
-@app.get("/", response_class=HTMLResponse)
-async def serve_camera_ui():
-    """Serves index.html to the phone's web browser."""
-    html_path = Path("index.html")
-    if not html_path.is_file():
-        raise HTTPException(status_code=404, detail="index.html file not found in current folder.")
-    return html_path.read_text(encoding="utf-8")
-
-
 @app.post("/api/v1/audit")
 async def audit_product_label(files: list[UploadFile] = File(...)):
-    """Receives multiple photos sent from the phone."""
+    """Receives multiple photos sent from the client."""
     if not files or len(files) == 0:
         raise HTTPException(status_code=400, detail="No images received.")
     if len(files) > 3:
         raise HTTPException(status_code=400, detail="Maximum 3 images permitted.")
 
-    # Process image bytes directly in RAM without saving temp files to disk
     encoded_images = []
     for file in files:
         contents = await file.read()
@@ -173,7 +158,7 @@ async def audit_product_label(files: list[UploadFile] = File(...)):
 # --- Optional Local CLI Execution ---
 
 def extract_product_info_from_disk(image_paths: list[str]) -> dict:
-    """Reads paths directly from disk (your original workflow)."""
+    """Reads paths directly from disk."""
     encoded_images = []
     for p in image_paths:
         path = Path(p).expanduser().resolve()
@@ -185,11 +170,16 @@ def extract_product_info_from_disk(image_paths: list[str]) -> dict:
     return run_qwen_inference(encoded_images)
 
 
+# --- SERVE STATIC ASSETS (HTML, CSS, JS) ---
+# Must be mounted AFTER all API endpoints so it doesn't intercept /api routes.
+# html=True automatically routes "/" to "index.html" and serves style.css & script.js directly.
+app.mount("/", StaticFiles(directory=".", html=True), name="static")
+
+
 if __name__ == "__main__":
-    # If executed directly with 'python main.py', it tests local files
     IMAGE_PATHS = [
-        #"/home/swiz/testmodel/front.jpeg",
-        #"/home/swiz/testmodel/back.jpeg",
+        # "/home/swiz/testmodel/front.jpeg",
+        # "/home/swiz/testmodel/back.jpeg",
     ]
 
     try:
@@ -197,4 +187,3 @@ if __name__ == "__main__":
         print(json.dumps(extracted_data, indent=2))
     except Exception as e:
         print(f"Error processing images: {e}")
-
