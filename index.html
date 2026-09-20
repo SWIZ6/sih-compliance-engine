@@ -12,7 +12,7 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 
-<body data-theme="consumer">
+<body>
 
   <!-- TOP BAR NAVIGATION -->
   <nav>
@@ -23,9 +23,15 @@
         <span>Legal Metrology Auditor</span>
       </div>
     </div>
+
+    <!-- Mobile Dropdown: Prevents navbar overflow -->
     <div class="portal-nav-group">
-      <button class="portal-btn active" id="btnConsumer" onclick="switchTheme('consumer')">👤 Consumer</button>
-      <button class="portal-btn" id="btnInspector" onclick="switchTheme('inspector')">🛡️ Inspector</button>
+      <select id="portalSelect" class="portal-dropdown" onchange="handleNavSelect(this.value)">
+        <option value="" disabled selected>Select Portal...</option>
+        <option value="consumer">👤 Consumer</option>
+        <option value="inspector">🛡️ Inspector</option>
+        <option value="records">📋 Records</option>
+      </select>
     </div>
   </nav>
 
@@ -143,6 +149,20 @@
       </div>
     </section>
   </main>
+
+  <!-- AUDIT DATABASE RECORDS MODAL -->
+  <div id="recordsModal" class="modal-overlay" style="display: none;">
+    <div class="modal-box" style="max-width: 780px; width: 95%; max-height: 85vh; overflow-y: auto; text-align: left;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h3 style="color: #fff; margin: 0; font-size: 16px;">🏛️ Logged Compliance Records (database.db)</h3>
+        <button class="modal-cancel" onclick="closeRecordsModal()" style="margin: 0; padding: 6px 12px; width: auto;">✕ Close</button>
+      </div>
+
+      <div id="recordsList" style="display: flex; flex-direction: column; gap: 12px;">
+        <p style="color: var(--text-dim); font-size: 13px;">Fetching records from database...</p>
+      </div>
+    </div>
+  </div>
 
   <script src="script.js"></script>
 </body>

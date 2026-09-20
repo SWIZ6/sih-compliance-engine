@@ -1,5 +1,5 @@
 /* ==========================================================================
-   1. THEME & VIEW SWITCHING
+   1. THEME & VIEW SWITCHING (DROPDOWN COMPATIBLE)
    ========================================================================== */
 let currentTheme = 'consumer';
 let storedUploadFiles = [];
@@ -7,12 +7,30 @@ let storedUploadFiles = [];
 function showLanding() {
   document.getElementById('landingView').style.display = 'block';
   document.getElementById('portalWorkspace').style.display = 'none';
-  document.getElementById('btnConsumer').classList.remove('active');
-  document.getElementById('btnInspector').classList.remove('active');
-  document.body.setAttribute('data-theme', 'consumer');
+
+  // Reset dropdown state on landing page
+  const portalSelect = document.getElementById('portalSelect');
+  if (portalSelect) portalSelect.value = "";
+
+  // Remove theme attribute so neither portal styling is active by default
+  document.body.removeAttribute('data-theme');
   currentTheme = 'consumer';
   document.getElementById('logoIcon').innerText = "⚖";
   window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function handleNavSelect(value) {
+  if (!value) return;
+
+  if (value === 'records') {
+    openRecordsModal();
+    // Keep dropdown displaying the active workspace mode (or blank if home)
+    const onLanding = document.getElementById('landingView').style.display !== 'none';
+    document.getElementById('portalSelect').value = onLanding ? "" : currentTheme;
+    return;
+  }
+
+  switchTheme(value);
 }
 
 function switchTheme(theme) {
@@ -22,8 +40,9 @@ function switchTheme(theme) {
   document.getElementById('portalWorkspace').style.display = 'block';
 
   const isInspector = (theme === 'inspector');
-  document.getElementById('btnConsumer').classList.toggle('active', !isInspector);
-  document.getElementById('btnInspector').classList.toggle('active', isInspector);
+  const portalSelect = document.getElementById('portalSelect');
+  if (portalSelect) portalSelect.value = theme;
+
   document.getElementById('wsTitle').innerText = isInspector ? "Enforcement Officer Workspace" : "Consumer Protection Scan";
   document.getElementById('wsBadge').innerText = isInspector ? "Mode: Authority" : "Mode: Citizen";
   document.getElementById('logoIcon').innerText = isInspector ? "🛡️" : "⚖";
@@ -33,43 +52,47 @@ function switchTheme(theme) {
 }
 
 /* ==========================================================================
-   2. RELIABLE DIRECT IMAGE TRIGGERS (FIXES MOBILE INPUT BUG)
+   2. RELIABLE DIRECT IMAGE TRIGGERS (MOBILE INPUT BUG FIX)
    ========================================================================== */
 const inputGallery = document.getElementById('fileInputGallery');
 const inputCamera = document.getElementById('fileInputCamera');
 
 function triggerCamera(e) {
   if (e) e.stopPropagation();
-  inputCamera.value = ''; // Reset value to allow re-selection
-  inputCamera.click();
+  if (inputCamera) {
+    inputCamera.value = ''; // Reset value to allow selecting identical file again
+    inputCamera.click();
+  }
 }
 
 function triggerGallery(e) {
   if (e) e.stopPropagation();
-  inputGallery.value = ''; // Reset value to allow re-selection
-  inputGallery.click();
+  if (inputGallery) {
+    inputGallery.value = ''; // Reset value to allow selecting identical file again
+    inputGallery.click();
+  }
 }
 
-// Mobile-friendly input change listener
 function handleFiles(e) {
   const incomingFiles = Array.from(e.target.files);
   if (!incomingFiles.length) return;
 
   // Append new files up to 3 total
   storedUploadFiles = storedUploadFiles.concat(incomingFiles).slice(0, 3);
-  window.mockResponseData = null; // Clear mock since real files are chosen
+  window.mockResponseData = null; // Invalidate mock data when real photos are used
 
   renderSlotPreviews();
 }
 
-inputGallery.addEventListener('change', handleFiles);
-inputCamera.addEventListener('change', handleFiles);
+if (inputGallery) inputGallery.addEventListener('change', handleFiles);
+if (inputCamera) inputCamera.addEventListener('change', handleFiles);
 
 function renderSlotPreviews() {
   for (let i = 1; i <= 3; i++) {
     const slot = document.getElementById(`slot${i}`);
-    const file = storedUploadFiles[i - 1];
+    if (!slot) continue;
 
+    const file = storedUploadFiles[i - 1];
     if (file) {
       const previewUrl = (typeof file === 'string') ? file : URL.createObjectURL(file);
       slot.innerHTML = `<span class="slot-tag">Angle ${i}</span><img src="${previewUrl}" alt="Angle ${i}" />`;
@@ -83,53 +106,27 @@ function renderSlotPreviews() {
 function clearWorkspace() {
   storedUploadFiles = [];
   window.mockResponseData = null;
-  inputGallery.value = '';
-  inputCamera.value = '';
+  if (inputGallery) inputGallery.value = '';
+  if (inputCamera) inputCamera.value = '';
   renderSlotPreviews();
   resetTerminal();
 }
 
 function resetTerminal() {
-  document.getElementById('terminal').innerHTML = `<div style="color: var(--text-dim);">Awaiting image ingest sequence...<span class="cursor-blink"></span></div>`;
-  document.getElementById('resultCard').style.display = 'none';
+  const term = document.getElementById('terminal');
+  if (term) {
+    term.innerHTML = `<div style="color: var(--text-dim);">Awaiting image ingest sequence...<span class="cursor-blink"></span></div>`;
+  }
+  const rc = document.getElementById('resultCard');
+  if (rc) rc.style.display = 'none';
 }
 
 /* ==========================================================================
-   3. DEMO MOCKS
+   3. DEMO MOCKS (INACTIVE PRESETS)
    ========================================================================== */
 function loadMock(type) {
-  const isClean = (type === 'clean');
-  const color = isClean ? '10b981' : 'ef4444';
-  const text = isClean ? 'COMPLIANT PACK' : 'VIOLATION PACK';
-
-  const svg = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400"><rect width="400" height="400" fill="%230a1326"/><rect x="40" y="40" width="320" height="320" rx="14" fill="none" stroke="%23${color}" stroke-width="6"/><text x="200" y="200" fill="%23fff" font-family="sans-serif" font-size="20" font-weight="bold" text-anchor="middle">${text}</text></svg>`;
-
-  storedUploadFiles = [svg]; // Set preview SVG
-  renderSlotPreviews();
-
-  window.mockResponseData = isClean ? {
-    product_name: "Britannia Winkin Cow Thick Shake",
-    generic_name: "Flavored Milk Beverage",
-    manufacturer_name: "Britannia Industries Limited",
-    manufacturer_address: "5/1A Hungerford Street, Kolkata, West Bengal - 700017",
-    net_quantity: "180 ml",
-    mrp: "₹35.00",
-    unit_sale_price: "₹0.19/ml",
-    manufacturing_date: "14/09/2026",
-    use_by_date: "14/03/2027",
-    consumer_care_details: "feedback@britannia.co.in / 1800-425-4449"
-  } : {
-    product_name: "Farm Plus Red Chilli Sauce",
-    generic_name: "Red Chilli Sauce",
-    manufacturer_name: "MANJARI FOODS",
-    manufacturer_address: "Kalkar Nest, Ferry Road, Bolara Post, Mangalore - 575 001",
-    net_quantity: "100gms",
-    mrp: false,
-    unit_sale_price: false,
-    manufacturing_date: "01/09/2026",
-    use_by_date: false,
-    consumer_care_details: false
-  };
+  // Inactive: performs no action to avoid UI shifting
+  return;
 }
 
 /* ==========================================================================
@@ -140,7 +137,7 @@ async function startTerminalScan() {
   const hasMock = Boolean(window.mockResponseData);
 
   if (!hasLiveFiles && !hasMock) {
-    alert("Action Restricted: Please upload 1-3 photos or select a demo preset first.");
+    alert("Action Restricted: Please snap or upload 1 to 3 packaging photos first.");
     return;
   }
 
@@ -153,7 +150,7 @@ async function startTerminalScan() {
   const logSteps = [
     `> Ingesting package visual arrays... [OK]`,
     `> Matrix downscaling (max_dimension: 1024)... [OK]`,
-    `> Running local Qwen2.5-VL zero-temperature inference... [OK]`,
+    `> Running local vlm zero-temperature inference... [OK]`,
     `> Evaluating 10 statutory clauses under Rules (2011)... [OK]`
   ];
 
@@ -182,7 +179,7 @@ async function startTerminalScan() {
     } catch (err) {
       const errDiv = document.createElement('div');
       errDiv.className = 'term-line warning';
-      errDiv.innerText = `> [WARN] Server inference failed: ${err.message}. Using fallback.`;
+      errDiv.innerText = `> [WARN] Server inference failed: ${err.message}. Check backend.`;
       term.appendChild(errDiv);
       extractedFields = window.mockResponseData || {};
     }
@@ -312,3 +309,60 @@ function drawScene() {
   requestAnimationFrame(drawScene);
 }
 if (canvas) drawScene();
+
+/* ==========================================================================
+   6. DATABASE RECORDS MODAL LOGIC
+   ========================================================================== */
+const recordsModal = document.getElementById('recordsModal');
+const recordsList = document.getElementById('recordsList');
+
+function openRecordsModal() {
+  if (recordsModal) {
+    recordsModal.style.display = 'flex';
+    fetchDatabaseRecords();
+  }
+}
+
+function closeRecordsModal() {
+  if (recordsModal) {
+    recordsModal.style.display = 'none';
+  }
+}
+
+async function fetchDatabaseRecords() {
+  if (!recordsList) return;
+  recordsList.innerHTML = '<p style="color: var(--text-dim);">Querying database.db...</p>';
+
+  try {
+    const res = await fetch('/api/v1/products');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const records = await res.json();
+
+    if (!records || records.length === 0) {
+      recordsList.innerHTML = '<p style="color: var(--text-dim);">No scanned products found in database.db.</p>';
+      return;
+    }
+
+    recordsList.innerHTML = records.map(item => `
+      <div class="db-record-card">
+        <div class="db-record-header">
+          <span class="db-record-title">#${item.product_id} — ${item.product_name || 'Unnamed Product'}</span>
+          <span class="db-record-meta">${item.created_at || 'Just now'}</span>
+        </div>
+        <div class="db-record-grid">
+          <div class="db-field-pill"><strong>Generic:</strong> ${item.generic_name || 'N/A'}</div>
+          <div class="db-field-pill"><strong>MRP:</strong> ${item.mrp || 'Missing'}</div>
+          <div class="db-field-pill"><strong>Unit Sale Price:</strong> ${item.unit_sale_price || 'Missing'}</div>
+          <div class="db-field-pill"><strong>Net Quantity:</strong> ${item.net_quantity || 'Missing'}</div>
+          <div class="db-field-pill"><strong>Mfg Date:</strong> ${item.manufacturing_date || 'Missing'}</div>
+          <div class="db-field-pill"><strong>Expiry:</strong> ${item.use_by_date || 'Missing'}</div>
+          <div class="db-field-pill" style="grid-column: 1 / -1;">
+            <strong>Manufacturer:</strong> ${item.manufacturer_name || 'N/A'}, ${item.manufacturer_address || 'Address not declared'}
+          </div>
+        </div>
+      </div>
+    `).join('');
+  } catch (err) {
+    recordsList.innerHTML = `<p style="color: var(--danger);">Failed to load records: ${err.message}</p>`;
+  }
+}

@@ -58,7 +58,7 @@ body::before {
 }
 
 /* ==========================================================================
-   2. TOP BAR NAVIGATION
+   2. TOP BAR NAVIGATION & COMPACT DROPDOWN
    ========================================================================== */
 nav {
   position: sticky;
@@ -113,32 +113,34 @@ nav {
 
 .portal-nav-group {
   display: flex;
-  gap: 4px;
-  background: rgba(255, 255, 255, 0.04);
-  padding: 3px;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  align-items: center;
+  flex-shrink: 0;
 }
 
-.portal-btn {
-  background: transparent;
-  border: none;
-  color: var(--text-dim);
+/* Dropdown selector preventing navbar overflow on phones */
+.portal-dropdown {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: var(--text-pure);
   padding: 6px 10px;
-  border-radius: 6px;
-  font-size: 11px;
+  border-radius: 8px;
+  font-size: 11.5px;
   font-weight: 700;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  white-space: nowrap;
+  outline: none;
+  max-width: 145px;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
-.portal-btn.active {
-  background: linear-gradient(135deg, var(--theme-secondary), var(--theme-primary));
-  color: #fff;
-  box-shadow: 0 2px 10px var(--theme-glow);
+.portal-dropdown:focus {
+  border-color: var(--theme-primary);
+  box-shadow: 0 0 10px var(--theme-glow);
+}
+
+.portal-dropdown option {
+  background: #0a1326;
+  color: #ffffff;
+  padding: 8px;
 }
 
 /* ==========================================================================
@@ -192,7 +194,7 @@ canvas {
   position: absolute;
   top: 10px;
   left: 10px;
-  background: rgba(0,0,0,0.7);
+  background: rgba(0, 0, 0, 0.7);
   border: 1px solid var(--theme-border);
   padding: 4px 8px;
   border-radius: 4px;
@@ -366,16 +368,18 @@ canvas {
   border-color: var(--theme-primary);
 }
 
-/* 3 ANGLE SLOTS */
+/* 3-ANGLE SLOTS: LOCKED GEOMETRY */
 .slots-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 8px;
   margin-bottom: 14px;
+  width: 100%;
 }
 
 .slot-item {
   aspect-ratio: 1 / 1;
+  width: 100%;
   border-radius: 8px;
   background: rgba(0, 0, 0, 0.6);
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -387,6 +391,9 @@ canvas {
 }
 
 .slot-item img {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -603,4 +610,80 @@ canvas {
   font-weight: 700;
   font-size: 12px;
   cursor: pointer;
+}
+
+/* ==========================================================================
+   6. MODALS & DATABASE HISTORY CARDS
+   ========================================================================== */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 2000;
+  align-items: center;
+  justify-content: center;
+  padding: 14px;
+}
+
+.modal-box {
+  background: var(--card-bg);
+  border: 1px solid var(--theme-border);
+  border-radius: 14px;
+  padding: 18px 14px;
+  width: 100%;
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.8);
+}
+
+.modal-cancel {
+  background: transparent;
+  border: none;
+  color: var(--danger);
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.db-record-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.db-record-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  padding-bottom: 8px;
+  margin-bottom: 8px;
+}
+
+.db-record-title {
+  font-weight: 700;
+  color: #fff;
+  font-size: 14px;
+}
+
+.db-record-meta {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.db-record-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 6px;
+  font-size: 11.5px;
+  color: #cbd5e1;
+}
+
+.db-field-pill {
+  background: rgba(0, 0, 0, 0.35);
+  padding: 6px 8px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
 }

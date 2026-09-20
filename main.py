@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from database import init_db, save_product_record, get_all_products
 
 
 # 1. Pydantic schema enforcing the 10 statutory declarations
@@ -126,6 +127,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.on_event("startup")
+def on_startup():
+    init_db()
+
+# Inside your /api/v1/audit endpoint:
+# record_id = save_product_record(extracted_data)
 
 @app.post("/api/v1/audit")
 async def audit_product_label(files: list[UploadFile] = File(...)):
@@ -146,14 +153,22 @@ async def audit_product_label(files: list[UploadFile] = File(...)):
 
     try:
         extracted_data = run_qwen_inference(encoded_images)
+        record_id = save_product_record(extracted_data)
+
         return {
             "status": "success",
+            "record_id": record_id,  # Returns the SQLite row ID
             "images_analyzed": len(encoded_images),
             "data": extracted_data,
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Inference error: {str(e)}")
 
+# --- GET STORED AUDIT RECORDS ---
+@app.get("/api/v1/products")
+def fetch_saved_products(limit: int = 50):
+    """Retrieve logged compliance records from database.db."""
+    return get_all_products(limit=limit)
 
 # --- Optional Local CLI Execution ---
 
@@ -168,6 +183,7 @@ def extract_product_info_from_disk(image_paths: list[str]) -> dict:
             encoded_images.append(downscale_and_encode(img))
 
     return run_qwen_inference(encoded_images)
+
 
 
 # --- SERVE STATIC ASSETS (HTML, CSS, JS) ---
