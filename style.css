@@ -681,9 +681,23 @@ canvas {
   color: #cbd5e1;
 }
 
+/* Normal field box */
 .db-field-pill {
   background: rgba(0, 0, 0, 0.35);
   padding: 6px 8px;
   border-radius: 4px;
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  color: #cbd5e1;
+  transition: all 0.2s ease;
+}
+
+/* Red highlighted box for any missing declaration */
+.db-field-pill.missing-field {
+  background: rgba(239, 68, 68, 0.18) !important;
+  border: 1px solid rgba(239, 68, 68, 0.5) !important;
+  color: #fca5a5 !important; /* Soft high-contrast red */
+}
+
+.db-field-pill.missing-field strong {
+  color: #ef4444 !important; /* Bold alert red label */
 }

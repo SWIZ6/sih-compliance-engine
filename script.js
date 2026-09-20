@@ -343,25 +343,34 @@ async function fetchDatabaseRecords() {
       return;
     }
 
+    // Helper to check if a database field is absent
+    function formatFieldPill(label, value) {
+        const isMissing = !value || value === "Missing" || value === "N/A" || value === "false" || value === false;
+        const displayVal = isMissing ? "Missing" : value;
+        const extraClass = isMissing ? "missing-field" : "";
+
+        return `<div class="db-field-pill ${extraClass}"><strong>${label}:</strong> ${displayVal}</div>`;
+    }
+
     recordsList.innerHTML = records.map(item => `
-      <div class="db-record-card">
-        <div class="db-record-header">
-          <span class="db-record-title">#${item.product_id} — ${item.product_name || 'Unnamed Product'}</span>
-          <span class="db-record-meta">${item.created_at || 'Just now'}</span>
-        </div>
-        <div class="db-record-grid">
-          <div class="db-field-pill"><strong>Generic:</strong> ${item.generic_name || 'N/A'}</div>
-          <div class="db-field-pill"><strong>MRP:</strong> ${item.mrp || 'Missing'}</div>
-          <div class="db-field-pill"><strong>Unit Sale Price:</strong> ${item.unit_sale_price || 'Missing'}</div>
-          <div class="db-field-pill"><strong>Net Quantity:</strong> ${item.net_quantity || 'Missing'}</div>
-          <div class="db-field-pill"><strong>Mfg Date:</strong> ${item.manufacturing_date || 'Missing'}</div>
-          <div class="db-field-pill"><strong>Expiry:</strong> ${item.use_by_date || 'Missing'}</div>
-          <div class="db-field-pill" style="grid-column: 1 / -1;">
-            <strong>Manufacturer:</strong> ${item.manufacturer_name || 'N/A'}, ${item.manufacturer_address || 'Address not declared'}
-          </div>
-        </div>
+  <div class="db-record-card">
+    <div class="db-record-header">
+      <span class="db-record-title">#${item.product_id} — ${item.product_name || 'Unnamed Product'}</span>
+      <span class="db-record-meta">${item.created_at || 'Just now'}</span>
+    </div>
+    <div class="db-record-grid">
+      ${formatFieldPill("Generic", item.generic_name)}
+      ${formatFieldPill("MRP", item.mrp)}
+      ${formatFieldPill("Unit Sale Price", item.unit_sale_price)}
+      ${formatFieldPill("Net Quantity", item.net_quantity)}
+      ${formatFieldPill("Mfg Date", item.manufacturing_date)}
+      ${formatFieldPill("Expiry", item.use_by_date)}
+      <div class="db-field-pill ${(!item.manufacturer_name && !item.manufacturer_address) ? 'missing-field' : ''}" style="grid-column: 1 / -1;">
+        <strong>Manufacturer:</strong> ${item.manufacturer_name || 'Missing'}, ${item.manufacturer_address || 'Address not declared'}
       </div>
-    `).join('');
+    </div>
+  </div>
+`).join('');
   } catch (err) {
     recordsList.innerHTML = `<p style="color: var(--danger);">Failed to load records: ${err.message}</p>`;
   }
