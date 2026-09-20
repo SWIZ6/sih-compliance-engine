@@ -2,20 +2,19 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>PAKSHAK — Autonomous Legal Metrology AI Engine</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&family=Space+Grotesk:wght@500;700&family=Fira+Code:wght@400;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Space+Grotesk:wght@600;700;800&family=Fira+Code:wght@400;600&display=swap" rel="stylesheet">
 
-  <!-- External Stylesheet -->
   <link rel="stylesheet" href="style.css" />
 </head>
 
 <body data-theme="consumer">
 
-  <!-- NAVIGATION -->
+  <!-- TOP BAR NAVIGATION -->
   <nav>
     <div class="brand" onclick="showLanding()">
       <div class="brand-logo" id="logoIcon">⚖</div>
@@ -25,13 +24,13 @@
       </div>
     </div>
     <div class="portal-nav-group">
-      <button class="portal-btn active" id="btnConsumer" onclick="switchTheme('consumer')">👤 Consumer Portal</button>
-      <button class="portal-btn" id="btnInspector" onclick="switchTheme('inspector')">🛡️ Inspector Portal</button>
+      <button class="portal-btn active" id="btnConsumer" onclick="switchTheme('consumer')">👤 Consumer</button>
+      <button class="portal-btn" id="btnInspector" onclick="switchTheme('inspector')">🛡️ Inspector</button>
     </div>
   </nav>
 
   <main>
-    <!-- LANDING VIEW WITH ANIME CANVAS -->
+    <!-- LANDING VIEW -->
     <section id="landingView">
       <div class="hero-title">Automated AI Compliance Engine</div>
       <p class="hero-desc">Extracting labels, cross-referencing Rules (2011), and empowering authorities instantly.</p>
@@ -41,7 +40,6 @@
         <canvas id="animeCanvas" width="850" height="478"></canvas>
       </div>
 
-      <!-- SYSTEM TELEMETRY METRICS -->
       <div class="metrics-strip">
         <div class="metric-card">
           <div class="metric-value">12x</div>
@@ -57,7 +55,6 @@
         </div>
       </div>
 
-      <!-- SYSTEM BENEFITS GRID -->
       <div class="section-header">
         <h3>System Impact & Utility</h3>
         <p>Built for Department of Consumer Affairs enforcement and conscious buyers.</p>
@@ -82,7 +79,7 @@
       </div>
     </section>
 
-    <!-- PORTAL WORKSPACE (CONSUMER / INSPECTOR) -->
+    <!-- PORTAL WORKSPACE -->
     <section id="portalWorkspace">
       <div class="workspace-card">
 
@@ -91,48 +88,54 @@
           <div class="ws-badge" id="wsBadge">Mode: Citizen</div>
         </div>
 
-        <!-- Hidden File Inputs -->
+        <!-- Hidden File Inputs: separate gallery vs camera -->
         <input type="file" id="fileInputGallery" accept="image/*" multiple style="display:none;" />
         <input type="file" id="fileInputCamera" accept="image/*" capture="environment" style="display:none;" />
 
-        <!-- Dropzone -->
-        <div class="dropzone" onclick="showUploadModal()">
+        <!-- Interactive Dropzone -->
+        <div class="dropzone" id="dropzoneBox">
           <div class="dropzone-icon">📸</div>
-          <h4 style="font-size: 16px; font-weight: 700; color: #fff;">Initialize Capture Sequence</h4>
-          <p style="font-size: 13px; color: var(--text-dim); margin-top: 6px;">Upload Front, MRP, and Net Quantity Panels (1-3 files)</p>
+          <h4>Initialize Capture Sequence</h4>
+          <p>Upload Front, MRP, and Net Quantity Panels (1-3 photos)</p>
+          <div class="dropzone-triggers">
+            <button type="button" class="action-chip" onclick="triggerCamera(event)">📷 Snap Camera</button>
+            <button type="button" class="action-chip" onclick="triggerGallery(event)">🖼️ Choose Gallery</button>
+          </div>
         </div>
 
+        <!-- Demo Presets -->
         <div class="demo-dock">
-          <button class="demo-btn" onclick="loadMock('clean')">Load Compliant Product</button>
-          <button class="demo-btn" onclick="loadMock('violation')">Load Non-Compliant Product</button>
+          <button type="button" class="demo-btn" onclick="loadMock('clean')">Load Compliant Product</button>
+          <button type="button" class="demo-btn" onclick="loadMock('violation')">Load Non-Compliant Product</button>
         </div>
 
+        <!-- 3-Angle Viewport -->
         <div class="slots-grid">
-          <div class="slot-item" id="slot1"><div class="slot-tag">Angle 1</div>Waiting...</div>
-          <div class="slot-item" id="slot2"><div class="slot-tag">Angle 2</div>Waiting...</div>
-          <div class="slot-item" id="slot3"><div class="slot-tag">Angle 3</div>Waiting...</div>
+          <div class="slot-item" id="slot1"><span class="slot-tag">Angle 1</span><span class="slot-placeholder">Waiting...</span></div>
+          <div class="slot-item" id="slot2"><span class="slot-tag">Angle 2</span><span class="slot-placeholder">Waiting...</span></div>
+          <div class="slot-item" id="slot3"><span class="slot-tag">Angle 3</span><span class="slot-placeholder">Waiting...</span></div>
         </div>
 
+        <!-- Main Buttons -->
         <div class="btn-row">
-          <button class="btn-main" onclick="startTerminalScan()">Run AI Inspection Scan</button>
-          <button class="btn-clear" onclick="clearWorkspace()">Clear</button>
+          <button type="button" class="btn-main" onclick="startTerminalScan()">Run AI Inspection Scan</button>
+          <button type="button" class="btn-clear" onclick="clearWorkspace()">Clear</button>
         </div>
 
-        <!-- Interactive Terminal Output -->
+        <!-- Terminal Output -->
         <div class="terminal-output" id="terminal">
           <div style="color: var(--text-dim);">Awaiting image ingest sequence...<span class="cursor-blink"></span></div>
         </div>
 
         <!-- Result Card -->
         <div class="result-card" id="resultCard">
-          <h4 style="color:#fff; margin-bottom: 12px; display: flex; justify-content: space-between;">
-            <span>Legal Metrology (2011) Audit Report</span>
-            <span id="resultVerdict" style="font-weight: 800;"></span>
-          </h4>
-          <div style="font-size: 13px; color: var(--text-dim); line-height: 1.8;" id="resultDetails"></div>
+          <div class="result-header">
+            <span class="result-title">Legal Metrology (2011) Audit Report</span>
+            <span id="resultVerdict" class="result-verdict-badge"></span>
+          </div>
+          <div id="resultDetails" class="audit-grid"></div>
 
-          <!-- Inspector Only Export Button -->
-          <button class="btn-export" id="exportBtn" onclick="alert('Downloading encrypted PDF dossier...')">
+          <button type="button" class="btn-export" id="exportBtn" onclick="alert('Downloading encrypted PDF dossier...')">
             📥 Export Tamper-Proof Legal Dossier (PDF)
           </button>
         </div>
@@ -141,28 +144,6 @@
     </section>
   </main>
 
-  <!-- CAMERA VS GALLERY MODAL -->
-  <div id="uploadModal" class="modal-overlay">
-    <div class="modal-box">
-      <h4 style="margin-bottom: 16px; font-size: 18px; color: var(--text-pure);">Select Image Source</h4>
-
-      <div class="modal-options">
-        <button class="modal-btn" onclick="openCamera()">
-          <span style="font-size: 24px;">📷</span>
-          <span>Take Photo<br><small style="color:var(--text-dim); font-size: 10px;">Use Device Camera</small></span>
-        </button>
-
-        <button class="modal-btn" onclick="openGallery()">
-          <span style="font-size: 24px;">🖼️</span>
-          <span>Choose Gallery<br><small style="color:var(--text-dim); font-size: 10px;">Upload from Device</small></span>
-        </button>
-      </div>
-
-      <button class="modal-cancel" onclick="closeUploadModal()">Cancel</button>
-    </div>
-  </div>
-
-  <!-- External Script -->
   <script src="script.js"></script>
 </body>
 </html>

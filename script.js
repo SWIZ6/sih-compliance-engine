@@ -1,5 +1,5 @@
 /* ==========================================================================
-   1. THEME & VIEW SWITCHING LOGIC
+   1. THEME & VIEW SWITCHING
    ========================================================================== */
 let currentTheme = 'consumer';
 let storedUploadFiles = [];
@@ -33,39 +33,48 @@ function switchTheme(theme) {
 }
 
 /* ==========================================================================
-   2. FILE INPUT & MULTI-SLOT HANDLING
+   2. RELIABLE DIRECT IMAGE TRIGGERS (FIXES MOBILE INPUT BUG)
    ========================================================================== */
-const modal = document.getElementById('uploadModal');
 const inputGallery = document.getElementById('fileInputGallery');
 const inputCamera = document.getElementById('fileInputCamera');
 
-function showUploadModal() { modal.style.display = 'flex'; }
-function closeUploadModal() { modal.style.display = 'none'; }
-function openGallery() { closeUploadModal(); inputGallery.click(); }
-function openCamera() { closeUploadModal(); inputCamera.click(); }
+function triggerCamera(e) {
+  if (e) e.stopPropagation();
+  inputCamera.value = ''; // Reset value to allow re-selection
+  inputCamera.click();
+}
 
+function triggerGallery(e) {
+  if (e) e.stopPropagation();
+  inputGallery.value = ''; // Reset value to allow re-selection
+  inputGallery.click();
+}
+
+// Mobile-friendly input change listener
 function handleFiles(e) {
-  const files = Array.from(e.target.files).slice(0, 3);
-  if (files.length > 0) {
-    storedUploadFiles = files;
-    fillSlots(files.map(f => URL.createObjectURL(f)));
-  }
+  const incomingFiles = Array.from(e.target.files);
+  if (!incomingFiles.length) return;
+
+  // Append new files up to 3 total
+  storedUploadFiles = storedUploadFiles.concat(incomingFiles).slice(0, 3);
+  window.mockResponseData = null; // Clear mock since real files are chosen
+
+  renderSlotPreviews();
 }
 
 inputGallery.addEventListener('change', handleFiles);
 inputCamera.addEventListener('change', handleFiles);
 
-window.onclick = function(event) {
-  if (event.target === modal) closeUploadModal();
-};
-
-function fillSlots(urls) {
+function renderSlotPreviews() {
   for (let i = 1; i <= 3; i++) {
     const slot = document.getElementById(`slot${i}`);
-    if (urls[i - 1]) {
-      slot.innerHTML = `<div class="slot-tag">Angle ${i}</div><img src="${urls[i - 1]}" />`;
+    const file = storedUploadFiles[i - 1];
+
+    if (file) {
+      const previewUrl = (typeof file === 'string') ? file : URL.createObjectURL(file);
+      slot.innerHTML = `<span class="slot-tag">Angle ${i}</span><img src="${previewUrl}" alt="Angle ${i}" />`;
     } else {
-      slot.innerHTML = `<div class="slot-tag">Angle ${i}</div>Waiting...`;
+      slot.innerHTML = `<span class="slot-tag">Angle ${i}</span><span class="slot-placeholder">Waiting...</span>`;
     }
   }
   resetTerminal();
@@ -74,12 +83,10 @@ function fillSlots(urls) {
 function clearWorkspace() {
   storedUploadFiles = [];
   window.mockResponseData = null;
-  for (let i = 1; i <= 3; i++) {
-    document.getElementById(`slot${i}`).innerHTML = `<div class="slot-tag">Angle ${i}</div>Waiting...`;
-  }
-  resetTerminal();
   inputGallery.value = '';
   inputCamera.value = '';
+  renderSlotPreviews();
+  resetTerminal();
 }
 
 function resetTerminal() {
@@ -88,16 +95,17 @@ function resetTerminal() {
 }
 
 /* ==========================================================================
-   3. DEMO PRESETS (FALLBACK MOCKS)
+   3. DEMO MOCKS
    ========================================================================== */
 function loadMock(type) {
   const isClean = (type === 'clean');
   const color = isClean ? '10b981' : 'ef4444';
   const text = isClean ? 'COMPLIANT PACK' : 'VIOLATION PACK';
-  const svg = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400"><rect width="400" height="400" fill="%230f172a"/><rect x="50" y="50" width="300" height="300" rx="16" fill="none" stroke="%23${color}" stroke-width="4"/><text x="200" y="200" fill="%23fff" font-family="sans-serif" font-size="22" font-weight="bold" text-anchor="middle">${text}</text></svg>`;
 
-  storedUploadFiles = [];
-  fillSlots([svg]);
+  const svg = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400"><rect width="400" height="400" fill="%230a1326"/><rect x="40" y="40" width="320" height="320" rx="14" fill="none" stroke="%23${color}" stroke-width="6"/><text x="200" y="200" fill="%23fff" font-family="sans-serif" font-size="20" font-weight="bold" text-anchor="middle">${text}</text></svg>`;
+
+  storedUploadFiles = [svg]; // Set preview SVG
+  renderSlotPreviews();
 
   window.mockResponseData = isClean ? {
     product_name: "Britannia Winkin Cow Thick Shake",
@@ -111,39 +119,40 @@ function loadMock(type) {
     use_by_date: "14/03/2027",
     consumer_care_details: "feedback@britannia.co.in / 1800-425-4449"
   } : {
-    product_name: "Spicy Masala Chips",
-    generic_name: "Potato Chips",
-    manufacturer_name: false,
-    manufacturer_address: false,
-    net_quantity: "45 g",
-    mrp: "₹20.00",
+    product_name: "Farm Plus Red Chilli Sauce",
+    generic_name: "Red Chilli Sauce",
+    manufacturer_name: "MANJARI FOODS",
+    manufacturer_address: "Kalkar Nest, Ferry Road, Bolara Post, Mangalore - 575 001",
+    net_quantity: "100gms",
+    mrp: false,
     unit_sale_price: false,
     manufacturing_date: "01/09/2026",
-    use_by_date: "01/03/2027",
+    use_by_date: false,
     consumer_care_details: false
   };
 }
 
 /* ==========================================================================
-   4. AUDIT PIPELINE & VERIFICATION RENDERING
+   4. AUDIT PIPELINE & EXECUTION
    ========================================================================== */
 async function startTerminalScan() {
-  const hasLiveFiles = storedUploadFiles.length > 0;
+  const hasLiveFiles = storedUploadFiles.length > 0 && typeof storedUploadFiles[0] !== 'string';
   const hasMock = Boolean(window.mockResponseData);
 
   if (!hasLiveFiles && !hasMock) {
-    alert("Action Restricted: Please upload photos or select a demo preset first.");
+    alert("Action Restricted: Please upload 1-3 photos or select a demo preset first.");
     return;
   }
 
   const term = document.getElementById('terminal');
   term.innerHTML = '';
   document.getElementById('resultCard').style.display = 'none';
-  document.getElementById('exportBtn').style.display = 'none';
+  const exportBtn = document.getElementById('exportBtn');
+  if (exportBtn) exportBtn.style.display = 'none';
 
   const logSteps = [
     `> Ingesting package visual arrays... [OK]`,
-    `> Downscaling frame matrices to boundary max_res: 1024... [OK]`,
+    `> Matrix downscaling (max_dimension: 1024)... [OK]`,
     `> Running local Qwen2.5-VL zero-temperature inference... [OK]`,
     `> Evaluating 10 statutory clauses under Rules (2011)... [OK]`
   ];
@@ -154,23 +163,26 @@ async function startTerminalScan() {
     div.innerText = step;
     term.appendChild(div);
     term.scrollTop = term.scrollHeight;
-    await new Promise(r => setTimeout(r, 260));
+    await new Promise(r => setTimeout(r, 220));
   }
 
   let extractedFields = {};
+
   if (hasLiveFiles) {
     const formData = new FormData();
-    storedUploadFiles.forEach(file => formData.append('files', file));
+    storedUploadFiles.forEach(file => {
+      if (file instanceof File) formData.append('files', file);
+    });
 
     try {
       const res = await fetch('/api/v1/audit', { method: 'POST', body: formData });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
-      extractedFields = json.data || json.result || {};
+      extractedFields = json.data || json.result || json.audit || json;
     } catch (err) {
       const errDiv = document.createElement('div');
       errDiv.className = 'term-line warning';
-      errDiv.innerText = `> [ERROR] Backend communication failed: ${err.message}. Falling back to mock.`;
+      errDiv.innerText = `> [WARN] Server inference failed: ${err.message}. Using fallback.`;
       term.appendChild(errDiv);
       extractedFields = window.mockResponseData || {};
     }
@@ -201,17 +213,17 @@ function renderCompleteAudit(data) {
   };
 
   let missingCount = 0;
-  let gridHTML = '<div class="audit-grid">';
+  let itemsHTML = '';
 
   for (const [key, label] of Object.entries(labelMap)) {
-    const val = data[key];
-    const isPresent = (val !== false && val !== null && val !== undefined && val !== "false");
+    const val = data ? data[key] : null;
+    const isPresent = (val !== false && val !== null && val !== undefined && val !== "false" && val !== "");
 
     if (!isPresent) missingCount++;
 
-    gridHTML += `
+    itemsHTML += `
       <div class="audit-item ${isPresent ? '' : 'violation'}">
-        <div>
+        <div class="audit-info">
           <div class="audit-key">${label}</div>
           <div class="audit-val">${isPresent ? val : '<em style="color:var(--danger)">Missing / Non-Compliant</em>'}</div>
         </div>
@@ -221,38 +233,45 @@ function renderCompleteAudit(data) {
       </div>
     `;
   }
-  gridHTML += '</div>';
 
   const isClean = (missingCount === 0);
 
   const finalMsg = document.createElement('div');
   finalMsg.className = `term-line ${isClean ? 'success' : 'warning'}`;
   finalMsg.style.fontWeight = 'bold';
-  finalMsg.style.marginTop = '10px';
+  finalMsg.style.marginTop = '8px';
   finalMsg.innerHTML = isClean
     ? `> [SUCCESS] Audit Complete: All 10 Statutory Declarations Verified.<span class="cursor-blink"></span>`
     : `> [ALERT] Audit Complete: ${missingCount} Statutory Violation(s) Flagged.<span class="cursor-blink"></span>`;
   term.appendChild(finalMsg);
   term.scrollTop = term.scrollHeight;
 
-  verdictBadge.innerText = isClean ? 'VERIFIED: COMPLIANT' : `NON-COMPLIANT (${missingCount} VIOLATIONS)`;
-  verdictBadge.style.color = isClean ? 'var(--success)' : 'var(--danger)';
-  detailsContainer.innerHTML = gridHTML;
+  if (isClean) {
+    verdictBadge.className = 'result-verdict-badge compliant';
+    verdictBadge.innerText = 'VERIFIED: COMPLIANT';
+  } else {
+    verdictBadge.className = 'result-verdict-badge non-compliant';
+    verdictBadge.innerText = `NON-COMPLIANT (${missingCount} VIOLATIONS)`;
+  }
 
+  detailsContainer.innerHTML = itemsHTML;
   rc.style.display = 'block';
+
   if (currentTheme === 'inspector') {
-    document.getElementById('exportBtn').style.display = 'block';
+    const exportBtn = document.getElementById('exportBtn');
+    if (exportBtn) exportBtn.style.display = 'block';
   }
 }
 
 /* ==========================================================================
-   5. CANVAS ANIMATION (HERO SIMULATION)
+   5. CANVAS SIMULATION
    ========================================================================== */
 const canvas = document.getElementById('animeCanvas');
-const ctx = canvas.getContext('2d');
+const ctx = canvas ? canvas.getContext('2d') : null;
 let frame = 0;
 
 function drawScene() {
+  if (!ctx) return;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   const bgGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
@@ -261,84 +280,35 @@ function drawScene() {
   ctx.fillStyle = bgGrad;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // Grid background
-  ctx.strokeStyle = 'rgba(0, 242, 254, 0.05)';
-  ctx.lineWidth = 1;
-  for (let i = 0; i < canvas.width; i += 40) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height); ctx.stroke(); }
-  for (let i = 0; i < canvas.height; i += 40) { ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(canvas.width, i); ctx.stroke(); }
-
-  // Character Silhouette
   ctx.fillStyle = '#0f172a';
   ctx.beginPath();
   ctx.arc(200, 250, 60, Math.PI, 0);
   ctx.lineTo(260, 480); ctx.lineTo(140, 480);
   ctx.fill();
 
-  // Tech Visor
   const glow = Math.sin(frame * 0.05) * 0.5 + 0.5;
   ctx.fillStyle = `rgba(0, 242, 254, ${0.4 + glow * 0.6})`;
-  ctx.shadowColor = '#00f2fe';
-  ctx.shadowBlur = 15;
   ctx.fillRect(170, 230, 35, 10);
   ctx.fillRect(215, 230, 35, 10);
-  ctx.shadowBlur = 0;
 
-  // Hand & Phone
-  ctx.fillStyle = '#1e293b';
-  ctx.fillRect(250, 280, 25, 60);
-  ctx.fillStyle = '#334155';
-  ctx.fillRect(260, 260, 20, 40);
-
-  // Periodic Flash
-  if (frame % 150 > 140) {
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-    ctx.beginPath(); ctx.arc(270, 270, 40, 0, Math.PI * 2); ctx.fill();
-  }
-
-  // Data Stream Particles
-  ctx.fillStyle = '#00f2fe';
-  for (let i = 0; i < 5; i++) {
-    let x = 280 + ((frame * 3 + i * 40) % 250);
-    let y = 270 + Math.sin(frame * 0.1 + i) * 15;
-    ctx.fillRect(x, y, 8, 3);
-  }
-
-  // Target Box
   ctx.strokeStyle = '#cbd5e1';
   ctx.lineWidth = 3;
-  ctx.strokeRect(550, 150, 180, 220);
+  ctx.strokeRect(520, 150, 180, 220);
   ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
-  ctx.fillRect(550, 150, 180, 220);
+  ctx.fillRect(520, 150, 180, 220);
 
-  ctx.fillStyle = '#475569';
+  ctx.fillStyle = '#94a3b8';
   ctx.font = '14px sans-serif';
-  ctx.fillText("Net Wt: 1 kg", 570, 190);
-  ctx.fillText("MRP: ₹150", 570, 220);
+  ctx.fillText("Net Wt: 1 kg", 540, 190);
+  ctx.fillText("MRP: ₹150", 540, 220);
 
-  // Scan Sweep
   let scanY = 150 + ((Math.sin(frame * 0.03) + 1) / 2) * 220;
   ctx.fillStyle = 'rgba(0, 242, 254, 0.2)';
-  ctx.fillRect(550, 150, 180, scanY - 150);
+  ctx.fillRect(520, 150, 180, scanY - 150);
   ctx.fillStyle = '#00f2fe';
-  ctx.shadowColor = '#00f2fe';
-  ctx.shadowBlur = 10;
-  ctx.fillRect(540, scanY, 200, 3);
-  ctx.shadowBlur = 0;
-
-  if (scanY > 190) {
-    ctx.strokeStyle = '#10b981';
-    ctx.strokeRect(565, 175, 80, 20);
-    ctx.fillStyle = '#10b981';
-    ctx.fillText("PASS", 655, 190);
-  }
-  if (scanY > 220) {
-    ctx.strokeStyle = '#10b981';
-    ctx.strokeRect(565, 205, 80, 20);
-    ctx.fillStyle = '#10b981';
-    ctx.fillText("PASS", 655, 220);
-  }
+  ctx.fillRect(510, scanY, 200, 3);
 
   frame++;
   requestAnimationFrame(drawScene);
 }
-drawScene();
+if (canvas) drawScene();

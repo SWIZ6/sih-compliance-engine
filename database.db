@@ -1,0 +1,19 @@
+CREATE TABLE product_details (
+    product_id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+    product_name TEXT,
+    generic_name TEXT,
+    manufacturer_name TEXT,
+    manufacturer_address TEXT,
+
+    net_quantity TEXT,
+    mrp TEXT,
+    unit_sale_price TEXT,
+
+    manufacturing_date TEXT,
+    use_by_date TEXT,
+
+    consumer_care_details TEXT,
+
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
