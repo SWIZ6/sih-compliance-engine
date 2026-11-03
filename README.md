@@ -85,28 +85,28 @@ Every packaged commodity sold in India must display mandatory statutory declarat
 ```mermaid
 flowchart TD
     A["📸 Multi-Angle Package Capture<br/>(1-3 Photos: Front, Back, MRP Panel)"] --> B["🌐 Web Interface / Mobile Client<br/>(Vanilla JS + Canvas HUD)"]
-    B -->|Multipart POST /api/v1/audit| C["⚡ FastAPI Server (main.py)"]
+    B -->|"Multipart POST /api/v1/audit"| C["⚡ FastAPI Server (main.py)"]
     
-    subgraph Preprocessing ["Image Optimization Engine"]
+    subgraph Preprocessing["Image Optimization Engine"]
         C --> D["Pillow Image Processor"]
         D --> E["Lanczos Downscaling (Max 1024px)"]
         E --> F["Base64 JPEG Matrix Encoding"]
     end
     
-    subgraph LocalVLM ["Deterministic AI Inference"]
+    subgraph LocalVLM["Deterministic AI Inference"]
         F --> G["Ollama Server (Local API)"]
         G --> H["Qwen2.5-VL:7B Vision-Language Model"]
-        H -->|Zero Temp (0.0) + Pydantic Schema| I["Structured JSON Extraction"]
+        H -->|"Zero Temperature 0.0 + Pydantic Schema"| I["Structured JSON Extraction"]
     end
     
-    subgraph ValidationPersistence ["Rule 6 Verification & Storage"]
+    subgraph ValidationPersistence["Rule 6 Verification & Storage"]
         I --> J["Regex Post-Inference Sanitizer<br/>(Validates numeric MRP, USP, Mfg Date)"]
         J --> K["Audit Verdict Generator<br/>(COMPLIANT vs NON-COMPLIANT)"]
-        K --> L[("🗄️ SQLite Database<br/>(database.db)")]
+        K --> L[("🗄️ SQLite Database (database.db)")]
     end
     
-    K -->|Audit JSON Payload| B
-    L -->|GET /api/v1/products| M["📋 Inspection Records Modal"]
+    K -->|"Audit JSON Payload"| B
+    L -->|"GET /api/v1/products"| M["📋 Inspection Records Modal"]
 ```
 
 ---
