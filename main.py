@@ -1,16 +1,20 @@
+import asyncio
 import base64
 import io
 import json
 import re
-import ollama
+from contextlib import asynccontextmanager
 from pathlib import Path
-from PIL import Image
+from PIL import Image, ImageOps
+import ollama
 from pydantic import BaseModel, Field
 
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from database import init_db, save_product_record, get_all_products
+
+BASE_DIR = Path(__file__).resolve().parent
 
 
 # 1. Pydantic schema enforcing the 10 statutory declarations
@@ -95,10 +99,25 @@ def run_qwen_inference(encoded_images: list[str]) -> dict:
         format=ProductDetails.model_json_schema(),
         options={"temperature": 0.0},
     )
-    validated_data = ProductDetails.model_validate_json(response.message.content)
+
+    # Robust handling for string content vs dict or message object
+    raw_content = getattr(response.message, "content", "") if hasattr(response, "message") else str(response)
+    raw_content = raw_content.strip()
+
+    # Strip markdown code fences if wrapped by the model (e.g., ```json ... ```)
+    if raw_content.startswith("```"):
+        raw_content = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw_content, flags=re.DOTALL).strip()
+
+    validated_data = ProductDetails.model_validate_json(raw_content)
     data = validated_data.model_dump()
 
-    # --- MANUAL POST-INFERENCE VALIDATION ---
+    # --- POST-INFERENCE VALIDATION & SANITIZATION ---
+    # Convert string artifacts like "false", "none", "null", "N/A" to boolean False
+    for k, v in list(data.items()):
+        if isinstance(v, str) and v.strip().lower() in ("false", "none", "null", "n/a", "missing", "not visible", ""):
+            data[k] = False
+
+    # Numerical verification for pricing & date fields
     if data.get("mrp") is not False:
         if not re.search(r"\d", str(data.get("mrp", ""))):
             data["mrp"] = False
@@ -110,14 +129,19 @@ def run_qwen_inference(encoded_images: list[str]) -> dict:
     if data.get("manufacturing_date") is not False:
         if not re.search(r"\d", str(data.get("manufacturing_date", ""))):
             data["manufacturing_date"] = False
-    # ----------------------------------------
+    # ------------------------------------------------
 
     return data
 
 
 # --- FastAPI Web Application ---
 
-app = FastAPI(title="Legal Metrology Packaging Auditor")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    init_db()
+    yield
+
+app = FastAPI(title="Legal Metrology Packaging Auditor", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -127,12 +151,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.on_event("startup")
-def on_startup():
-    init_db()
-
-# Inside your /api/v1/audit endpoint:
-# record_id = save_product_record(extracted_data)
 
 @app.post("/api/v1/audit")
 async def audit_product_label(files: list[UploadFile] = File(...)):
@@ -147,12 +165,15 @@ async def audit_product_label(files: list[UploadFile] = File(...)):
         contents = await file.read()
         try:
             with Image.open(io.BytesIO(contents)) as pil_img:
+                # Transpose smartphone EXIF rotation so sideways photos are righted
+                pil_img = ImageOps.exif_transpose(pil_img)
                 encoded_images.append(downscale_and_encode(pil_img))
         except Exception:
             raise HTTPException(status_code=400, detail=f"File {file.filename} is not a valid image.")
 
     try:
-        extracted_data = run_qwen_inference(encoded_images)
+        # Offload blocking Ollama inference to worker thread pool to prevent blocking the event loop
+        extracted_data = await asyncio.to_thread(run_qwen_inference, encoded_images)
         record_id = save_product_record(extracted_data)
 
         return {
@@ -164,11 +185,13 @@ async def audit_product_label(files: list[UploadFile] = File(...)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Inference error: {str(e)}")
 
+
 # --- GET STORED AUDIT RECORDS ---
 @app.get("/api/v1/products")
 def fetch_saved_products(limit: int = 50):
     """Retrieve logged compliance records from database.db."""
     return get_all_products(limit=limit)
+
 
 # --- Optional Local CLI Execution ---
 
@@ -180,16 +203,15 @@ def extract_product_info_from_disk(image_paths: list[str]) -> dict:
         if not path.is_file():
             raise FileNotFoundError(f"Image not found at path: {path}")
         with Image.open(path) as img:
+            img = ImageOps.exif_transpose(img)
             encoded_images.append(downscale_and_encode(img))
 
     return run_qwen_inference(encoded_images)
 
 
-
 # --- SERVE STATIC ASSETS (HTML, CSS, JS) ---
-# Must be mounted AFTER all API endpoints so it doesn't intercept /api routes.
-# html=True automatically routes "/" to "index.html" and serves style.css & script.js directly.
-app.mount("/", StaticFiles(directory=".", html=True), name="static")
+# Mounted with absolute BASE_DIR so it works regardless of current working directory
+app.mount("/", StaticFiles(directory=str(BASE_DIR), html=True), name="static")
 
 
 if __name__ == "__main__":

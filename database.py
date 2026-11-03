@@ -1,10 +1,21 @@
 import sqlite3
+from pathlib import Path
 
-DB_FILE = "database.db"
+# Resolve DB path relative to this script directory to prevent CWD dependency issues
+DB_FILE = Path(__file__).resolve().parent / "database.db"
+
+def _clean_field(val) -> str | None:
+    """Sanitizes field values so None, False, or string placeholders convert to SQL NULL."""
+    if val is None or val is False:
+        return None
+    s = str(val).strip()
+    if s.lower() in ("false", "none", "null", "missing", "n/a", "not declared", ""):
+        return None
+    return s
 
 def init_db():
     """Initializes the SQLite database schema if not already present."""
-    with sqlite3.connect(DB_FILE) as conn:
+    with sqlite3.connect(DB_FILE, timeout=10.0) as conn:
         cursor = conn.cursor()
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS product_details (
@@ -26,7 +37,7 @@ def init_db():
 
 def save_product_record(data: dict) -> int:
     """Inserts an extracted product record and returns its product_id."""
-    with sqlite3.connect(DB_FILE) as conn:
+    with sqlite3.connect(DB_FILE, timeout=10.0) as conn:
         cursor = conn.cursor()
         cursor.execute("""
             INSERT INTO product_details (
@@ -42,23 +53,24 @@ def save_product_record(data: dict) -> int:
                 consumer_care_details
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
-            str(data.get("product_name")) if data.get("product_name") is not False else None,
-            str(data.get("generic_name")) if data.get("generic_name") is not False else None,
-            str(data.get("manufacturer_name")) if data.get("manufacturer_name") is not False else None,
-            str(data.get("manufacturer_address")) if data.get("manufacturer_address") is not False else None,
-            str(data.get("net_quantity")) if data.get("net_quantity") is not False else None,
-            str(data.get("mrp")) if data.get("mrp") is not False else None,
-            str(data.get("unit_sale_price")) if data.get("unit_sale_price") is not False else None,
-            str(data.get("manufacturing_date")) if data.get("manufacturing_date") is not False else None,
-            str(data.get("use_by_date")) if data.get("use_by_date") is not False else None,
-            str(data.get("consumer_care_details")) if data.get("consumer_care_details") is not False else None,
+            _clean_field(data.get("product_name")),
+            _clean_field(data.get("generic_name")),
+            _clean_field(data.get("manufacturer_name")),
+            _clean_field(data.get("manufacturer_address")),
+            _clean_field(data.get("net_quantity")),
+            _clean_field(data.get("mrp")),
+            _clean_field(data.get("unit_sale_price")),
+            _clean_field(data.get("manufacturing_date")),
+            _clean_field(data.get("use_by_date")),
+            _clean_field(data.get("consumer_care_details")),
         ))
         conn.commit()
         return cursor.lastrowid
 
 def get_all_products(limit: int = 50) -> list[dict]:
     """Retrieves the most recent product records."""
-    with sqlite3.connect(DB_FILE) as conn:
+    init_db()  # Ensure database and table exist
+    with sqlite3.connect(DB_FILE, timeout=10.0) as conn:
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM product_details ORDER BY product_id DESC LIMIT ?", (limit,))

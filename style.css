@@ -302,6 +302,13 @@ canvas {
   text-align: center;
   background: rgba(0, 0, 0, 0.35);
   margin-bottom: 12px;
+  transition: all 0.2s ease;
+}
+
+.dropzone.dragover {
+  border-color: var(--theme-primary);
+  background: var(--theme-glow);
+  box-shadow: 0 0 20px var(--theme-glow);
 }
 
 .dropzone-icon {
